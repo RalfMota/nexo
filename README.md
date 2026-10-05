@@ -1,6 +1,7 @@
 # NEXO — Uma Jornada Matemática (protótipo v0.4)
 
 Jogo de aventura em navegador: o jogador explora a vila de Nexo, conversa com os moradores e resolve missões em que a Matemática faz parte da ação. A trilha vai de operações e frações, passa por razão e proporcionalidade e chega à linguagem algébrica e a funções.
+O objetivo da implementação é desenvolver aplicação gamificada voltada para a didática da disciplina de matemática do ensino fundamental, de forma a utilizar elementos de rpg/aventura em missões que envolvam desafios matemáticos, aos quais o usuário possa ir progredindo e avançando na história, e aprendendo/revisando conceitos da matéria. O aplicativo gera relatório das fases, ao qual pode ser acessado pelo professor, para o diagnóstico e avaliação do desempenho. O game nesse sentido poderá ser utilizado como ferramenta de ensino, de forma a despertar o interesse dos alunos, pelo conteúdo, de forma mais divertida e dinâmica.
 
 ## Como abrir
 
