@@ -1,0 +1,303 @@
+/* NEXO — Base visual: tokens, tipografia, painéis de vidro, botões em pixel e animações
+ *
+ * Dois materiais:
+ *   vidro (interface tecnológica do Nexo): painéis índigo translúcidos, texto claro;
+ *   papel (objetos do mundo): falas, registros e bilhetes, texto escuro.
+ * Contornos "em degrau" (sem cantos arredondados) imitam a borda de um sprite.
+ */
+
+:root {
+  /* Noite e vidro */
+  --night: #120f2a;
+  --night-2: #1d1842;
+  --glass: rgba(30, 26, 66, .74);
+  --glass-strong: rgba(22, 18, 50, .92);
+  --glass-edge: rgba(255, 255, 255, .14);
+  --line: #0c0920;
+  --text: #f4f0ff;
+  --text-soft: #b9b2d9;
+
+  /* Papel */
+  --paper: #fbf3df;
+  --paper-2: #f1e3c2;
+  --paper-3: #e2cf9f;
+  --ink: #2b1d14;
+  --ink-soft: #6b5440;
+
+  /* Cores do Nexo */
+  --crystal: #3fe0c5;
+  --crystal-deep: #0f9c8a;
+  --violet: #8d6bff;
+  --violet-deep: #5a3fc4;
+  --gold: #ffc35a;
+  --gold-deep: #d68a1c;
+  --sprout: #6fd36b;
+  --coral: #ff6b5b;
+
+  --ok: #2f9e55;
+  --warn: #c2541f;
+  --hint: #6a44c4;
+  --accent: var(--crystal);
+
+  /* Nomes antigos, mantidos para os módulos que ainda os usam */
+  --parchment: var(--paper);
+  --parchment-2: var(--paper-2);
+  --parchment-3: var(--paper-3);
+  --wood: #8a5a33;
+  --wood-dark: #4f3019;
+  --wood-light: #c08a55;
+  --magic: var(--violet);
+  --gold-dark: var(--gold-deep);
+
+  --font-display: "Pixelify Sans", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Lexend", "Segoe UI", system-ui, sans-serif;
+
+  /* Contorno de pixel: quatro sombras sem desfoque deixam os cantos "mordidos" */
+  --px: 3px;
+  --pixel-outline:
+    0 calc(var(--px) * -1) 0 0 var(--line),
+    0 var(--px) 0 0 var(--line),
+    calc(var(--px) * -1) 0 0 0 var(--line),
+    var(--px) 0 0 0 var(--line);
+  --lift: 0 calc(var(--px) * 3) 0 0 rgba(8, 5, 24, .45);
+  --radius: 4px;
+  --shadow-pop: var(--pixel-outline), var(--lift);
+
+  --ease-out: cubic-bezier(.2, .9, .3, 1.2);
+  --ease-soft: cubic-bezier(.4, 0, .2, 1);
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font: 400 16px/1.55 var(--font-body);
+  color: var(--text);
+  background: var(--night);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.big { font-size: 19px; }
+
+#app { position: fixed; inset: 0; }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: .01em;
+  margin: 0 0 .4em;
+}
+
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.15rem; }
+
+p { margin: 0 0 .6em; }
+
+.muted { color: var(--text-soft); }
+.small { font-size: .85em; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Painéis ---------- */
+
+/* Vidro: interface do Nexo */
+.frame,
+.glass {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(141, 107, 255, .14), transparent 40%),
+    var(--glass);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  color: var(--text);
+  border-radius: 0;
+  box-shadow: inset 0 0 0 2px var(--glass-edge), var(--pixel-outline), var(--lift);
+  padding: 20px 22px;
+}
+
+/* Filete de luz no topo do vidro */
+.frame::before,
+.glass::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 4px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(63, 224, 197, .7), transparent);
+  pointer-events: none;
+}
+
+/* Papel: objetos do mundo dentro do vidro */
+.paper {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--pixel-outline), 0 4px 0 0 rgba(8, 5, 24, .3);
+}
+
+/* ---------- Botões ---------- */
+
+.btn {
+  --btn-bg: var(--gold);
+  --btn-glow: rgba(255, 195, 90, .55);
+  --btn-text: #2a1606;
+  position: relative;
+  font: 700 .95rem var(--font-display);
+  letter-spacing: .02em;
+  color: var(--btn-text);
+  background: var(--btn-bg);
+  border: 0;
+  border-radius: 0;
+  margin: var(--px);
+  padding: .6em 1.15em .7em;
+  min-height: 44px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45em;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, .45),
+    inset 0 -5px 0 rgba(0, 0, 0, .22),
+    var(--pixel-outline),
+    var(--lift);
+  transition: transform .14s var(--ease-out), box-shadow .14s var(--ease-soft), filter .14s;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.03);
+  filter: brightness(1.08) saturate(1.1);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, .5),
+    inset 0 -5px 0 rgba(0, 0, 0, .22),
+    var(--pixel-outline),
+    0 calc(var(--px) * 4) 0 0 rgba(8, 5, 24, .45),
+    0 0 22px 4px var(--btn-glow);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(var(--px)) scale(.99);
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, .22),
+    inset 0 3px 0 rgba(0, 0, 0, .12),
+    var(--pixel-outline),
+    0 0 0 0 rgba(8, 5, 24, .45);
+}
+
+.btn:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.6); }
+
+.btn--crystal { --btn-bg: var(--crystal); --btn-glow: rgba(63, 224, 197, .55); --btn-text: #062a26; }
+.btn--magic { --btn-bg: var(--violet); --btn-glow: rgba(141, 107, 255, .6); --btn-text: #fff; }
+.btn--ghost { --btn-bg: #3a3370; --btn-glow: rgba(185, 178, 217, .35); --btn-text: var(--text); }
+.btn--danger { --btn-bg: var(--coral); --btn-glow: rgba(255, 107, 91, .5); --btn-text: #2a0905; }
+.btn--small { min-height: 36px; padding: .35em .85em .45em; font-size: .85rem; }
+.btn--icon { min-width: 44px; padding: 0; }
+.btn--block { width: calc(100% - var(--px) * 2); }
+
+/* Seletores de cor e de opção, compartilhados pelo criador de personagem */
+.swatch {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  cursor: pointer;
+  margin: var(--px);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, .3), inset 0 -4px 0 rgba(0, 0, 0, .25), var(--pixel-outline);
+  transition: transform .14s var(--ease-out), box-shadow .14s;
+}
+.swatch:hover { transform: translateY(-2px) scale(1.08); }
+.swatch[aria-pressed="true"] {
+  transform: translateY(-2px);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, .3), inset 0 -4px 0 rgba(0, 0, 0, .25), var(--pixel-outline), 0 0 0 6px var(--crystal), 0 0 16px 6px rgba(63, 224, 197, .5);
+}
+
+/* ---------- Formulários ---------- */
+
+input, select {
+  font: inherit;
+  color: var(--text);
+  background: rgba(10, 8, 30, .55);
+  border: 0;
+  border-radius: 0;
+  margin: var(--px);
+  min-height: 42px;
+  padding: 6px 12px;
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, .4), var(--pixel-outline);
+  transition: box-shadow .15s;
+}
+input::placeholder { color: var(--text-soft); }
+input:focus { outline: none; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .4), var(--pixel-outline), 0 0 0 6px rgba(63, 224, 197, .55); }
+
+input[type="range"] {
+  flex: 1;
+  min-width: 120px;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  accent-color: var(--crystal);
+}
+
+input[type="checkbox"], input[type="radio"] {
+  min-height: 0;
+  width: 20px;
+  height: 20px;
+  box-shadow: none;
+  accent-color: var(--crystal);
+}
+
+label { cursor: pointer; }
+
+:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 5px;
+}
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.stack { display: grid; gap: 10px; }
+.spacer { flex: 1; }
+
+/* ---------- Animações ---------- */
+
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes pop { from { opacity: 0; transform: scale(.94) translateY(10px); } }
+@keyframes slide-down { from { opacity: 0; transform: translateY(-14px); } }
+
+/* Saída: o módulo que fecha a janela adiciona .is-leaving e remove o elemento ao fim */
+.is-leaving { animation: leave .18s var(--ease-soft) forwards !important; }
+@keyframes leave { to { opacity: 0; transform: translateY(8px) scale(.97); } }
+
+/* Pulso de luz para destacar algo novo */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: var(--pixel-outline), 0 0 0 0 rgba(63, 224, 197, 0); }
+  50% { box-shadow: var(--pixel-outline), 0 0 18px 6px rgba(63, 224, 197, .55); }
+}
+
+/* Compasso de Nexo: destaca o que pode ser tocado */
+@keyframes compass-pulse { 50% { box-shadow: 0 0 0 4px rgba(255, 195, 90, .95), 0 0 20px 8px rgba(255, 195, 90, .6); } }
+body.compass .act:not(:disabled) { animation: compass-pulse 1.4s infinite; }
+
+/* Reduzir animações (opção do jogador ou do sistema) */
+body.calm *,
+body.calm *::before,
+body.calm *::after { animation: none !important; transition: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

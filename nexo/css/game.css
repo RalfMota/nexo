@@ -1,0 +1,517 @@
+/* NEXO — Tela de jogo: mundo, HUD, barra de ferramentas, diálogos, janelas */
+
+.game {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #2d5a33;
+}
+
+.game__world {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  touch-action: none;
+  cursor: pointer;
+}
+
+/* ---------- HUD superior ---------- */
+
+.hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 5;
+  animation: slide-down .4s var(--ease-out);
+}
+
+.hud > * { pointer-events: auto; }
+
+.hud-card,
+.hud-quest {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 2px var(--glass-edge), var(--pixel-outline), 0 6px 0 0 rgba(8, 5, 24, .35);
+  margin: var(--px);
+}
+
+.hud-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 6px 6px;
+  min-width: 0;
+}
+
+.hud-card canvas {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  flex: none;
+  box-shadow: var(--pixel-outline);
+}
+
+.hud-card__name { font: 700 1.05em var(--font-display); display: block; line-height: 1.1; }
+.hud-card__zone { font-size: .8em; color: var(--crystal); display: block; white-space: nowrap; }
+
+.hud-quest {
+  margin-left: auto;
+  padding: 8px 16px 10px;
+  max-width: min(420px, 50vw);
+  font-size: .9em;
+  line-height: 1.35;
+}
+
+.hud-quest__label {
+  display: block;
+  font: 700 .8em var(--font-display);
+  color: var(--gold);
+}
+
+.hud-quest__progress { display: flex; gap: 4px; margin-top: 8px; }
+
+.hud-quest__progress i {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, .12);
+  transition: background .4s, box-shadow .4s;
+}
+.hud-quest__progress i.done { background: var(--crystal); box-shadow: 0 0 8px rgba(63, 224, 197, .9); }
+
+/* ---------- Barra de ferramentas ---------- */
+
+.hotbar {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 2px var(--glass-edge), var(--pixel-outline), 0 6px 0 0 rgba(8, 5, 24, .4);
+  z-index: 25; /* acima da janela de missão: Compasso e Calculador ficam à mão */
+  animation: rise-in .45s var(--ease-out);
+}
+
+.slot {
+  position: relative;
+  width: 66px;
+  height: 62px;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, #3d3680, #2a2460);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  padding: 6px 2px 4px;
+  font: 700 .64em var(--font-display);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .18), inset 0 -4px 0 rgba(0, 0, 0, .3), var(--pixel-outline);
+  transition: transform .14s var(--ease-out), box-shadow .14s, background .2s;
+}
+
+.slot svg { width: 28px; height: 28px; transition: transform .2s var(--ease-out); }
+
+.slot:hover:not(:disabled) {
+  transform: translateY(-4px) scale(1.06);
+  background: linear-gradient(180deg, #4b43a0, #332b74);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .25), inset 0 -4px 0 rgba(0, 0, 0, .3), var(--pixel-outline), 0 0 18px 3px rgba(141, 107, 255, .55);
+}
+.slot:hover:not(:disabled) svg { transform: scale(1.12) rotate(-4deg); }
+.slot:active:not(:disabled) { transform: translateY(1px); }
+.slot:disabled { opacity: .35; cursor: not-allowed; }
+
+.slot[aria-pressed="true"] {
+  background: linear-gradient(180deg, #1f8f80, #126a60);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .25), var(--pixel-outline), 0 0 18px 4px rgba(63, 224, 197, .7);
+}
+
+.slot kbd {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font: 700 .95em var(--font-display);
+  color: var(--text-soft);
+}
+
+/* ---------- Diálogo no mundo ---------- */
+
+.dialogue {
+  position: absolute;
+  left: 50%;
+  bottom: 100px;
+  transform: translateX(-50%);
+  width: min(780px, calc(100% - 28px));
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  padding: 14px 18px 14px 14px;
+  z-index: 10;
+  animation: dialogue-in .28s var(--ease-out);
+}
+
+.dialogue[hidden] { display: none; }
+.dialogue--plain { grid-template-columns: 1fr; }
+
+@keyframes dialogue-in { from { opacity: 0; transform: translate(-50%, 18px) scale(.98); } }
+
+.portrait {
+  width: 100%;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+  background: var(--accent);
+  box-shadow: var(--pixel-outline);
+}
+
+.dialogue__name {
+  display: inline-block;
+  font: 700 1.05em var(--font-display);
+  background: var(--accent);
+  color: #fff;
+  padding: 2px 12px 3px;
+  margin: var(--px) var(--px) 8px;
+  box-shadow: var(--pixel-outline);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .35);
+}
+
+.dialogue__role { font-size: .8em; color: var(--text-soft); margin-left: 8px; }
+.dialogue__text { min-height: 3.2em; margin: 0 0 10px; font-size: 1.02em; }
+.dialogue__choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.dialogue__choices .done::after { content: " ✓"; }
+
+/* ---------- Controles de toque ---------- */
+
+.touch-pad {
+  position: absolute;
+  left: 14px;
+  bottom: 100px;
+  display: none;
+  grid-template-columns: repeat(3, 54px);
+  grid-template-rows: repeat(3, 54px);
+  gap: 4px;
+  z-index: 6;
+  user-select: none;
+}
+
+.touch-pad button {
+  border: 0;
+  background: var(--glass);
+  color: var(--text);
+  font-size: 1.2em;
+  touch-action: none;
+  box-shadow: inset 0 0 0 2px var(--glass-edge), var(--pixel-outline);
+}
+.touch-pad button:active { background: var(--violet-deep); }
+
+.touch-pad .up { grid-area: 1 / 2; }
+.touch-pad .left { grid-area: 2 / 1; }
+.touch-pad .right { grid-area: 2 / 3; }
+.touch-pad .down { grid-area: 3 / 2; }
+
+.touch-action {
+  position: absolute;
+  right: 18px;
+  bottom: 108px;
+  display: none;
+  width: 72px;
+  height: 72px;
+  font: 700 1.5em var(--font-display);
+  z-index: 6;
+}
+
+@media (pointer: coarse) {
+  .touch-pad { display: grid; }
+  .touch-action { display: inline-flex; }
+  .slot kbd { display: none; }
+}
+
+/* ---------- Avisos ---------- */
+
+.toasts {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 10px;
+  z-index: 50;
+  pointer-events: none;
+  width: min(440px, calc(100% - 28px));
+}
+
+.toast {
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--text);
+  padding: 10px 16px;
+  margin: var(--px);
+  box-shadow: inset 0 0 0 2px rgba(255, 195, 90, .5), var(--pixel-outline), 0 0 22px rgba(255, 195, 90, .35);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  animation: toast-in .4s var(--ease-out);
+}
+.toast > span:first-child { color: var(--gold); font-size: 1.2em; }
+.toast b { color: var(--gold); font-family: var(--font-display); }
+.toast.leaving { opacity: 0; transform: translateY(-10px) scale(.96); transition: .3s var(--ease-soft); }
+
+@keyframes toast-in { from { opacity: 0; transform: translateY(-16px) scale(.94); } }
+
+/* ---------- Janelas modais ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 30, .55);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 40;
+  animation: fade .2s;
+}
+
+.modal {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  animation: pop .3s var(--ease-out);
+}
+
+.modal--wide { width: min(1040px, 100%); }
+
+.modal__head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.modal__head h2 { margin: 0; }
+.modal__close { margin-left: auto; }
+
+/* ---------- Tabelas em papel (Registro técnico, Diário) ---------- */
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .88em;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--pixel-outline);
+  margin: var(--px) 0;
+}
+
+.ledger caption {
+  font: 700 .9em var(--font-display);
+  text-align: left;
+  color: var(--gold);
+  padding-bottom: 6px;
+}
+
+.ledger th,
+.ledger td {
+  padding: 5px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--paper-3);
+}
+
+.ledger th { background: var(--paper-2); font-family: var(--font-display); }
+.ledger tr.is-new td { animation: flash 1.2s; }
+.ledger td.bad { color: var(--warn); font-weight: 700; }
+.ledger td.good { color: var(--ok); font-weight: 700; }
+.ledger .muted { color: var(--ink-soft); }
+
+@keyframes flash { from { background: #fff1b3; } }
+
+/* Diário */
+.journal > .muted { color: var(--text-soft); }
+
+.journal details {
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 2px var(--glass-edge);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  transition: background .2s;
+}
+.journal details:hover { background: rgba(255, 255, 255, .1); }
+.journal details[open] { background: rgba(141, 107, 255, .14); }
+.journal summary { cursor: pointer; font-weight: 600; }
+.journal h3 { margin-top: 20px; color: var(--gold); }
+
+.concepts { list-style: none; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.concepts li { background: rgba(255, 255, 255, .06); box-shadow: inset 0 0 0 2px var(--glass-edge); padding: 8px 12px; color: var(--text-soft); }
+.concepts b { display: block; font-family: var(--font-display); color: var(--text); }
+
+/* Mapa */
+.map-view { display: grid; gap: 18px; grid-template-columns: 1.1fr 1fr; }
+.map-view canvas { width: 100%; image-rendering: pixelated; box-shadow: var(--pixel-outline); }
+.map-view .small { color: var(--text-soft); }
+.map-regions { display: grid; gap: 10px; align-content: start; }
+
+.region-card {
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 2px var(--glass-edge);
+  padding: 10px 14px 10px 18px;
+  transition: background .2s, transform .2s var(--ease-out);
+}
+.region-card:hover { background: rgba(255, 255, 255, .1); transform: translateX(3px); }
+.region-card h3 { font-size: 1em; margin: 0; }
+.region-card p { margin: 2px 0 6px; font-size: .84em; color: var(--text-soft); }
+.region-card.locked { opacity: .5; }
+.region-card .row { gap: 4px; }
+
+@media (max-width: 760px) {
+  .map-view { grid-template-columns: 1fr; }
+}
+
+/* Itens */
+.items { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 2px var(--glass-edge);
+  padding: 12px;
+  transition: background .2s, box-shadow .2s;
+}
+.item:hover { background: rgba(255, 255, 255, .1); box-shadow: inset 0 0 0 2px var(--crystal), 0 0 16px rgba(63, 224, 197, .3); }
+.item svg { width: 44px; height: 44px; flex: none; }
+.item .muted { color: var(--text-soft); }
+
+/* Calculador Arcano */
+.calculator {
+  position: absolute;
+  right: 14px;
+  bottom: 100px;
+  z-index: 35;
+  padding: 12px 14px;
+  width: min(360px, calc(100% - 28px));
+  animation: rise-in .25s var(--ease-out);
+}
+.calculator h3 { font-size: 1em; margin-bottom: 8px; }
+.calculator input { width: 5.2em; }
+.calculator output {
+  font: 700 1.3em var(--font-display);
+  min-width: 3em;
+  color: var(--crystal);
+  text-shadow: 0 0 10px rgba(63, 224, 197, .6);
+}
+
+@media (max-width: 640px) {
+  .hud { flex-direction: column; }
+  .hud-quest { margin-left: var(--px); max-width: none; }
+  .slot { width: 50px; height: 54px; font-size: .55em; }
+  .slot svg { width: 22px; height: 22px; }
+  .dialogue { grid-template-columns: 72px 1fr; bottom: 88px; }
+  .touch-pad { bottom: 88px; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 46px); }
+  .touch-action { bottom: 98px; }
+}
+
+/* Enquanto há diálogo ou missão aberta, o personagem não anda */
+.game.is-busy .touch-pad,
+.game.is-busy .touch-action { display: none; }
+
+/* ---------- Rastreador de missão de mundo (sem janela: preso ao HUD) ---------- */
+
+.game.has-quest .hud-quest { display: none; }
+
+.quest-tracker {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 8;
+  width: min(320px, calc(100% - 28px));
+  max-height: calc(100% - 120px);
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  margin: var(--px);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 2px var(--glass-edge), inset 4px 0 0 var(--accent), var(--pixel-outline), 0 6px 0 0 rgba(8, 5, 24, .35);
+  animation: slide-in-right .35s var(--ease-out);
+}
+
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(24px); } }
+
+.quest-tracker.is-pulsing { animation: tracker-pulse .5s var(--ease-out); }
+@keyframes tracker-pulse { 40% { box-shadow: inset 0 0 0 2px var(--glass-edge), inset 4px 0 0 var(--accent), var(--pixel-outline), 0 0 22px rgba(255, 195, 90, .55); } }
+
+.quest-tracker__head h2 { font-size: 1.15rem; margin: 2px 0 0; }
+.quest-tracker__region { font: 700 .75rem var(--font-display); color: var(--accent); filter: brightness(1.6); }
+
+.quest-tracker__stages { list-style: none; padding: 0; margin: 0; display: flex; gap: 4px; flex-wrap: wrap; }
+.quest-tracker__stages li {
+  font: 700 .7rem var(--font-display);
+  padding: 2px 8px 3px;
+  background: rgba(255, 255, 255, .08);
+  color: var(--text-soft);
+}
+.quest-tracker__stages li.current { background: var(--gold); color: #2a1606; box-shadow: 0 0 12px rgba(255, 195, 90, .5); }
+.quest-tracker__stages li.done { background: var(--sprout); color: #0e2a0c; }
+.quest-tracker__stages li.done::before { content: "✓ "; }
+
+.quest-tracker__objective { margin: 0; font-weight: 600; font-size: .92em; color: var(--text); }
+
+.quest-tracker__npc { display: grid; grid-template-columns: 40px 1fr; gap: 8px; align-items: start; }
+.quest-tracker__npc canvas { width: 40px; height: 40px; image-rendering: pixelated; box-shadow: var(--pixel-outline); }
+.quest-tracker__npc p {
+  margin: 0;
+  font-size: .85em;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 6px 8px;
+  box-shadow: var(--pixel-outline);
+}
+.quest-tracker[data-tone="ok"] .quest-tracker__npc p { background: #e9fbe8; }
+.quest-tracker[data-tone="warn"] .quest-tracker__npc p { background: #fff0e6; animation: nudge .35s; }
+.quest-tracker[data-tone="hint"] .quest-tracker__npc p { background: #f1ebff; }
+
+.quest-tracker__hints { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.quest-tracker__hints:empty { display: none; }
+.quest-tracker__hints li { font-size: .78em; background: rgba(141, 107, 255, .16); box-shadow: inset 0 0 0 2px rgba(141, 107, 255, .5); padding: 4px 8px; }
+.quest-tracker__hints b { color: #c9b6ff; font-family: var(--font-display); }
+
+.quest-tracker__notebook summary { cursor: pointer; font: 700 .8rem var(--font-display); color: var(--gold); }
+.quest-tracker__notebook .ledger caption { display: none; }
+
+.quest-tracker__actions { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.quest-tracker.is-complete { box-shadow: inset 0 0 0 2px var(--crystal), var(--pixel-outline), 0 0 26px rgba(63, 224, 197, .5); }
+.quest-tracker.is-complete .quest-tracker__objective { color: var(--crystal); font-family: var(--font-display); font-size: 1.05em; }
+
+@media (max-width: 640px) {
+  .quest-tracker { top: auto; bottom: 86px; right: 50%; transform: translateX(50%); max-height: 38vh; }
+}
+
+.quest-tracker__head { position: relative; padding-right: 30px; }
+.quest-tracker__fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: rgba(255, 255, 255, .08);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform .2s var(--ease-out), background .15s;
+}
+.quest-tracker__fold:hover { background: rgba(255, 255, 255, .16); }
+.quest-tracker.is-collapsed .quest-tracker__fold { transform: rotate(-90deg); }
+.quest-tracker.is-collapsed > :not(.quest-tracker__head):not(.quest-tracker__stages):not(.quest-tracker__objective) { display: none; }

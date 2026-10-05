@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEXO — Uma Jornada Matemática</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Pixelify+Sans:wght@500;700&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/screens.css">
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/mission.css">
+</head>
+<body>
+  <div id="app"></div>
+
+  <noscript>O NEXO precisa de JavaScript ativado para funcionar.</noscript>
+
+  <!-- Módulos JavaScript não carregam com o arquivo aberto direto (file://): é preciso um servidor local. -->
+  <script>
+    if (location.protocol === 'file:') {
+      document.getElementById('app').innerHTML =
+        '<div class="screen"><main class="screen__content"><div class="frame" style="max-width:560px">' +
+        '<h2>Abra o NEXO por um servidor local</h2>' +
+        '<p>O jogo usa módulos JavaScript, que o navegador bloqueia quando o arquivo é aberto direto da pasta.</p>' +
+        '<p><b>No VS Code:</b> abra a pasta <code>nexo</code> (Arquivo &gt; Abrir Pasta), clique com o botão direito em <code>index.html</code> e escolha <b>Open with Live Server</b>.</p>' +
+        '<p>Mais opções no arquivo <code>README.md</code>.</p></div></main></div>';
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

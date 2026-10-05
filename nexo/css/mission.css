@@ -1,0 +1,230 @@
+/* NEXO — Janela de missão: cena manipulável no centro, personagem e caderno ao lado */
+
+.mission-layer:empty { display: none; }
+
+.mission-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 10px 10px 88px;
+  background: rgba(10, 8, 30, .45);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: fade .25s;
+}
+
+.mission {
+  width: min(1320px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 12px 14px 14px;
+  display: grid;
+  gap: 10px;
+  animation: pop .32s var(--ease-out);
+}
+
+.mission__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.mission__region {
+  font: 700 .72em var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #fff;
+  background: var(--accent);
+  margin: var(--px);
+  padding: 3px 12px 4px;
+  box-shadow: var(--pixel-outline);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .3);
+}
+
+.mission__head h2 { margin: 0; font-size: 1.45em; }
+.mission__head .btn { margin-left: auto; }
+
+.mission__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 14px;
+  align-items: start;
+}
+
+.mission__play { display: grid; gap: 10px; min-width: 0; }
+.mission__stage { display: grid; gap: 10px; min-width: 0; }
+
+/* Personagem e caderno */
+.mission__side { display: grid; gap: 10px; align-content: start; }
+.mission__side > .btn { justify-self: start; }
+
+.mission__npc-id { display: flex; gap: 12px; align-items: center; }
+.mission__npc-id .portrait { width: 84px; flex: none; }
+.mission__npc-id b { font: 700 1.15em var(--font-display); display: block; }
+.mission__npc-id small { color: var(--text-soft); }
+
+.speech {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  margin: var(--px);
+  padding: 10px 12px;
+  font-size: .95em;
+  box-shadow: inset 0 0 0 3px var(--paper-3), var(--pixel-outline);
+  transition: background .25s, box-shadow .25s;
+}
+
+.speech::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 32px;
+  border: 9px solid transparent;
+  border-bottom-color: var(--paper);
+}
+
+.speech p { margin: 0; }
+.speech.tone-ok { background: #e9fbe8; box-shadow: inset 0 0 0 3px var(--sprout), var(--pixel-outline), 0 0 18px rgba(111, 211, 107, .45); }
+.speech.tone-ok::before { border-bottom-color: #e9fbe8; }
+.speech.tone-warn { background: #fff0e6; box-shadow: inset 0 0 0 3px var(--coral), var(--pixel-outline); animation: nudge .35s; }
+.speech.tone-warn::before { border-bottom-color: #fff0e6; }
+.speech.tone-hint { background: #f1ebff; box-shadow: inset 0 0 0 3px var(--violet), var(--pixel-outline); }
+.speech.tone-hint::before { border-bottom-color: #f1ebff; }
+
+@keyframes nudge { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+.hints { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.hints:empty { display: none; }
+.hints li {
+  font-size: .82em;
+  background: rgba(141, 107, 255, .16);
+  box-shadow: inset 0 0 0 2px rgba(141, 107, 255, .6);
+  padding: 6px 10px;
+  animation: pop .3s var(--ease-out);
+}
+.hints li b { color: #c9b6ff; font-family: var(--font-display); }
+
+.notebook:empty { display: none; }
+.notebook .ledger { font-size: .82em; }
+.notebook .ledger th, .notebook .ledger td { padding: 3px 8px; }
+
+/* Mesa de jogo */
+.playfield {
+  position: relative;
+  width: calc(100% - var(--px) * 2);
+  margin: var(--px);
+  box-shadow: var(--pixel-outline);
+  overflow: hidden;
+  background: #24324f;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.playfield__bg {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.playfield__zones,
+.playfield__tokens { position: absolute; inset: 0; pointer-events: none; }
+.playfield__zones > *,
+.playfield__tokens > * { pointer-events: auto; }
+
+.pf-zone {
+  position: absolute;
+  padding: 0;
+  background: transparent;
+  border: 3px dashed transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.playfield.is-dragging .pf-zone,
+.pf-zone.is-target { border-color: rgba(255, 207, 107, .85); background: rgba(255, 207, 107, .1); }
+.pf-zone.is-over { background: rgba(255, 207, 107, .32); }
+.pf-zone:focus-visible { border-color: #ff7a3d; }
+
+.pf-token {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  border-radius: 10px;
+}
+.pf-token canvas { width: 100%; height: 100%; display: block; pointer-events: none; }
+.pf-token:hover:not(:disabled) { filter: brightness(1.1) drop-shadow(0 0 6px rgba(255, 255, 255, .8)); }
+.pf-token--button { cursor: pointer; }
+.pf-token--button:active:not(:disabled) { transform: translateY(2px); }
+.pf-token.is-moving { transition: left .3s ease, top .3s ease, width .3s, height .3s; }
+.pf-token.is-dragging { cursor: grabbing; z-index: 5; filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .45)); }
+.pf-token.is-selected { outline: 3px solid #ffcf6b; outline-offset: 2px; filter: drop-shadow(0 0 10px rgba(255, 207, 107, .9)); }
+.pf-token:disabled { cursor: default; }
+
+.pf-ghost,
+.pf-fly { position: absolute; pointer-events: none !important; z-index: 6; }
+.pf-ghost canvas,
+.pf-fly canvas { width: 100%; height: 100%; display: block; }
+.pf-ghost { filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .45)); }
+
+.pf-dial {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  background: #3b3550;
+  border: 3px solid #c9862a;
+  border-radius: 12px;
+  padding: 4px 6px;
+  transform: translate(-50%, 0);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .3);
+}
+.pf-dial button {
+  width: 44px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: #c9862a;
+  color: #2b1d14;
+  font-size: 14px;
+  cursor: pointer;
+  touch-action: none;
+}
+.pf-dial button:active { background: #f2b84b; }
+.pf-dial output {
+  font: 700 26px var(--font-display);
+  color: #7ff0e0;
+  min-width: 2.2ch;
+  text-align: center;
+  background: #15122a;
+  border-radius: 6px;
+  padding: 0 6px;
+}
+
+/* Missão concluída */
+.mission-complete {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: linear-gradient(90deg, rgba(63, 224, 197, .22), rgba(255, 195, 90, .18));
+  box-shadow: inset 0 0 0 2px rgba(63, 224, 197, .7), 0 0 24px rgba(63, 224, 197, .3);
+  padding: 10px 14px;
+  margin: var(--px);
+}
+.mission-complete b { font: 700 1.2em var(--font-display); color: var(--crystal); text-shadow: 0 0 12px rgba(63, 224, 197, .7); }
+.mission.is-complete .mission-complete { display: flex; animation: pop .4s var(--ease-out); }
+
+@media (max-width: 900px) {
+  .mission__body { grid-template-columns: 1fr; }
+  .mission__side { grid-template-columns: auto 1fr; align-items: start; }
+  .mission__npc-id { grid-column: 1 / -1; }
+  .mission__npc-id .portrait { width: 64px; }
+  .speech, .hints, .notebook, .mission__side > .btn { grid-column: 1 / -1; }
+  .mission-layer { padding: 6px 6px 80px; }
+  .pf-dial button { width: 36px; height: 26px; }
+  .pf-dial output { font-size: 18px; }
+}
