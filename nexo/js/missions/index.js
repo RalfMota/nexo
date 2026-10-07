@@ -4,10 +4,12 @@ import prologue from './prologue.js';
 import seedsWorld from './seeds-world.js';
 import floodgatesWorld from './floodgates-world.js';
 import marketWorld from './market-world.js';
-import workshop from './workshop.js';
-import routes from './routes.js';
-import tower from './tower.js';
-import core from './core.js';
+import workshop from './workshop-world.js';
+import routes from './routes-world.js';
+import tower from './tower-world.js';
+import core from './core-world.js';
+import geometry from './geometry-world.js';
+import quadratic from './quadratic-world.js';
 import { topicsForMission, bandForMission } from '../data/curriculum.js';
 
 /**
@@ -16,8 +18,10 @@ import { topicsForMission, bandForMission } from '../data/curriculum.js';
  * hints (três níveis) e mount(stage, api), que monta a mecânica numa janela.
  * Missões com mode: 'world' acontecem no mapa: têm stages e mountWorld(api) no lugar de mount.
  * topics e band vêm da grade curricular (data/curriculum.js): quais conteúdos a missão observa.
+ * Desafios extras (extra: true) não contam para abrir regiões; aparecem quando a região
+ * indicada em unlockAfter estiver concluída.
  */
-export const MISSIONS = { ...prologue, ...seedsWorld, ...floodgatesWorld, ...marketWorld, ...workshop, ...routes, ...tower, ...core };
+export const MISSIONS = { ...prologue, ...seedsWorld, ...floodgatesWorld, ...marketWorld, ...workshop, ...routes, ...tower, ...core, ...geometry, ...quadratic };
 
 for (const [id, mission] of Object.entries(MISSIONS)) {
   mission.topics = topicsForMission(id).map((topic) => topic.id);

@@ -4,7 +4,8 @@
  *   students: cada aluno com nome, datas e o próprio save (progresso, estatísticas, registros);
  *   active:   o aluno que está jogando agora;
  *   teacher:  a senha do professor (só o resumo SHA-256, nunca o texto);
- *   set:      opções do computador (acessibilidade, música), iguais para todos os alunos.
+ *   set:      opções do computador (acessibilidade, música), iguais para todos os alunos;
+ *   turma:    código da turma online deste computador (cada aluno pode ter o seu, em student.turma).
  *
  * `state` é sempre o save do aluno ativo (ou um save vazio, sem aluno). Os módulos do jogo
  * continuam importando a mesma referência; trocar de aluno troca o conteúdo dela.
@@ -112,6 +113,14 @@ function snapshot(source) {
   return JSON.parse(JSON.stringify(save));
 }
 
+const saveListeners = new Set();
+
+/** Avisa quem precisa saber que o progresso mudou (a sincronização com a turma online). */
+export function onStateSaved(listener) {
+  saveListeners.add(listener);
+  return () => saveListeners.delete(listener);
+}
+
 export function saveState() {
   const student = school.students[school.active];
   if (student) {
@@ -119,6 +128,7 @@ export function saveState() {
     student.lastSeen = Date.now();
   }
   writeSchool();
+  if (student) saveListeners.forEach((listener) => listener(student));
 }
 
 /* ---------- Alunos ---------- */
@@ -181,6 +191,32 @@ export function deleteStudent(id) {
     school.active = null;
     replaceState(stateFor(null));
   }
+  writeSchool();
+}
+
+/* ---------- Turma online ---------- */
+
+/** Código da turma em que um aluno sincroniza: o dele, ou o do computador. */
+export const turmaOf = (student) => student?.turma || school.turma || null;
+export const computerTurma = () => school.turma ?? null;
+
+export function setComputerTurma(code) {
+  school.turma = code || null;
+  writeSchool();
+}
+
+export function setStudentTurma(id, code) {
+  const student = school.students[id];
+  if (!student) return;
+  student.turma = code || null;
+  writeSchool();
+}
+
+/** Turma que o professor abriu no painel (o código fica salvo; a senha nunca é salva). */
+export const teacherTurma = () => school.teacherTurma ?? null;
+
+export function setTeacherTurma(info) {
+  school.teacherTurma = info || null;
   writeSchool();
 }
 

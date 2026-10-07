@@ -1,0 +1,9 @@
+{
+  "name": "nexo-jornada-matematica",
+  "private": true,
+  "type": "module",
+  "description": "NEXO — Uma Jornada Matemática. Site estático + funções em api/ (turmas online na Vercel Blob).",
+  "dependencies": {
+    "@vercel/blob": "^2.8.1"
+  }
+}

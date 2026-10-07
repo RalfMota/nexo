@@ -1,8 +1,6 @@
-/* NEXO — Peças compartilhadas pelas missões: cena animada, registro e fundos */
+/* NEXO — Peças compartilhadas pelas missões: cena animada, registro e fundo de céu */
 
 import { setupCanvas, escapeHtml } from '../core/dom.js';
-import { prefersCalm } from '../core/state.js';
-import { approach } from '../art/shapes.js';
 
 /**
  * Anima um canvas de cena enquanto a missão estiver aberta.
@@ -25,9 +23,6 @@ export function createScene(canvas, width, height, draw, api) {
   frameId = requestAnimationFrame(loop);
   api.onCleanup(() => cancelAnimationFrame(frameId));
 }
-
-/** Aproxima valores animados; com "reduzir animações" a mudança é imediata. */
-export const tween = (current, target, dt, speed = 6) => (prefersCalm() ? target : approach(current, target, dt, speed));
 
 /**
  * Tabela do Registro técnico. A última linha recebe destaque.
@@ -54,17 +49,4 @@ export function paintSky(ctx, width, height, top = '#9fd8ff', bottom = '#e8f6ff'
   gradient.addColorStop(1, bottom);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
-}
-
-export function paintGround(ctx, width, height, y, color = '#7cc35a') {
-  ctx.fillStyle = color;
-  ctx.fillRect(0, y, width, height - y);
-  ctx.fillStyle = 'rgba(0,0,0,.08)';
-  for (let x = 0; x < width; x += 22) ctx.fillRect(x + ((x / 22) % 2) * 8, y + 6, 3, 2);
-}
-
-/** Painel escuro de fundo (máquinas, oficina, torre). */
-export function paintPanel(ctx, x, y, width, height, color = '#2a2440') {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, width, height);
 }

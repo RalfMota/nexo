@@ -83,13 +83,6 @@ export function drawGear(ctx, x, y, radius, angle, color, holeColor = '#2a1d3d')
   ctx.restore();
 }
 
-/** Moeda dourada. */
-export function drawCoin(ctx, x, y, radius = 6) {
-  circle(ctx, x, y + 1, radius, '#b9781c');
-  circle(ctx, x, y, radius, '#f2c14e');
-  circle(ctx, x - radius * 0.25, y - radius * 0.25, radius * 0.4, '#fff1b8');
-}
-
 /** Texto com contorno, para legendas sobre cenas. */
 export function outlinedText(ctx, text, x, y, { font = '700 14px "Fredoka", sans-serif', fill = '#fff', stroke = 'rgba(20,16,40,.85)', align = 'center' } = {}) {
   ctx.font = font;
@@ -101,10 +94,4 @@ export function outlinedText(ctx, text, x, y, { font = '700 14px "Fredoka", sans
   ctx.strokeText(text, x, y);
   ctx.fillStyle = fill;
   ctx.fillText(text, x, y);
-}
-
-/** Aproxima um valor de outro suavemente (animações de cena). */
-export function approach(current, target, dt, speed = 6) {
-  if (Math.abs(target - current) < 0.01) return target;
-  return current + (target - current) * Math.min(1, dt * speed);
 }

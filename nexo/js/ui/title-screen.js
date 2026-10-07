@@ -1,7 +1,8 @@
 /* NEXO — Tela de título do aluno: novo jogo, continuar, trocar de perfil, Modo Pesquisa e opções */
 
 import { qs, escapeHtml } from '../core/dom.js';
-import { state, DEBUG, saveState, startNewGame, activeStudent, resetStudent, signOut } from '../core/state.js';
+import { state, DEBUG, saveState, startNewGame, activeStudent, resetStudent, signOut, turmaOf, computerTurma, setStudentTurma } from '../core/state.js';
+import { syncStudent, syncStatus, onSyncStatus, isValidCode, normalizeCode } from '../core/cloud.js';
 import { getBaseLayer } from '../world/renderer.js';
 import { openJournal } from './journal.js';
 import { accessibilityMarkup, bindAccessibility, researchMarkup, bindResearch } from './options.js';
@@ -45,6 +46,60 @@ export function stopVillageBackground() {
   stopBackground?.();
 }
 
+/* ---------- Turma online do aluno ---------- */
+
+function classStatusText() {
+  const status = syncStatus();
+  if (status.ok === true) return `Progresso enviado às ${new Date(status.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`;
+  if (status.ok === false) return `Não deu para enviar: ${status.message}`;
+  return 'O progresso é enviado sozinho enquanto você joga.';
+}
+
+function classMarkup(student) {
+  const code = turmaOf(student);
+  const fromComputer = !student.turma && computerTurma();
+  return `
+    <p class="small">${code
+      ? `Você está na turma <b class="class-code class-code--small">${escapeHtml(code)}</b>${fromComputer ? ' (turma deste computador)' : ''}.`
+      : 'Se o professor deu um código de turma, digite aqui para ele acompanhar o seu progresso de qualquer computador.'}</p>
+    <form class="row" data-role="class-form">
+      <input name="code" maxlength="6" placeholder="Código" aria-label="Código da turma" autocomplete="off" value="${escapeHtml(student.turma ?? '')}" style="text-transform:uppercase;width:8em">
+      <button type="submit" class="btn btn--crystal btn--small">${student.turma ? 'Trocar' : 'Entrar'}</button>
+      ${student.turma ? '<button type="button" class="btn btn--ghost btn--small" data-role="class-leave">Sair da turma</button>' : ''}
+    </form>
+    <p class="small muted" data-role="class-status" aria-live="polite">${code ? classStatusText() : ''}</p>
+    <p class="small muted">Vai para a internet só o seu apelido, o personagem e o progresso nas missões.</p>`;
+}
+
+let stopClassStatus = null;
+
+function bindClass(root, student) {
+  const rerender = () => {
+    root.innerHTML = classMarkup(activeStudent() ?? student);
+    bindClass(root, activeStudent() ?? student);
+  };
+  stopClassStatus?.();
+  stopClassStatus = onSyncStatus(() => {
+    const line = qs('[data-role="class-status"]', root);
+    if (line && line.isConnected) line.textContent = classStatusText();
+  });
+  qs('[data-role="class-form"]', root).addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const code = normalizeCode(event.currentTarget.elements.code.value);
+    if (!isValidCode(code)) {
+      qs('[data-role="class-status"]', root).textContent = 'O código tem 6 letras e números. Confira com o professor.';
+      return;
+    }
+    setStudentTurma(student.id, code);
+    rerender();
+    await syncStudent(activeStudent());
+  });
+  qs('[data-role="class-leave"]', root)?.addEventListener('click', () => {
+    setStudentTurma(student.id, null);
+    rerender();
+  });
+}
+
 export function showTitle() {
   const student = activeStudent();
   if (!student) {
@@ -74,6 +129,10 @@ export function showTitle() {
             <div class="stack" data-role="research">${researchMarkup()}</div>
           </details>
           <details class="frame title-card">
+            <summary>Turma online</summary>
+            <div class="stack" data-role="class">${classMarkup(student)}</div>
+          </details>
+          <details class="frame title-card">
             <summary>Opções</summary>
             <div class="stack" data-role="options">
               ${accessibilityMarkup()}
@@ -91,6 +150,7 @@ export function showTitle() {
   animateVillageBackground(qs('.screen__bg', app));
   bindResearch(qs('[data-role="research"]', app));
   bindAccessibility(qs('[data-role="options"]', app));
+  bindClass(qs('[data-role="class"]', app), student);
   bindTeacherShortcut();
 
   qs('[data-role="new"]', app).addEventListener('click', () => {

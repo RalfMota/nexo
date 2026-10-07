@@ -15,7 +15,7 @@ const SUPPORT_LABELS = {
 
 export const CATEGORIES = [
   'operações', 'frações', 'proporcionalidade', 'porcentagem', 'linguagem algébrica',
-  'relações entre grandezas', 'previsão', 'representação', 'função',
+  'relações entre grandezas', 'previsão', 'representação', 'função', 'geometria',
 ];
 
 function categorySummary(category, missionIds) {

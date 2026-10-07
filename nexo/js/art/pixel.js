@@ -165,6 +165,20 @@ export class Pix {
     }
   }
 
+  /** Caixa vista de frente e um pouco de cima: tampa clara (`top` pixels) e frente com luz da esquerda. */
+  box(x0, y0, w, h, R, { top = 3, light = 0.72, grain = 0 } = {}) {
+    for (let y = y0; y < y0 + h; y++) {
+      for (let x = x0; x < x0 + w; x++) {
+        const isTop = y < y0 + top;
+        let level = isTop ? 0.92 - ((x - x0) / w) * 0.15 : light - ((x - x0) / w) * 0.3;
+        if (!isTop && x >= x0 + w - 2) level -= 0.18;
+        if (y === y0 + top) level -= 0.12;
+        if (grain && noise(x, y, grain) > 0.88) level -= 0.12;
+        this.set(x, y, toneOf(level, x, y, R), R.o);
+      }
+    }
+  }
+
   /** Contorno: cada pixel vazio encostado no desenho recebe a cor de contorno do vizinho. */
   outline({ diagonal = false } = {}) {
     const color = this.color.slice();

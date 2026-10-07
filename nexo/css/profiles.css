@@ -282,3 +282,18 @@
   .student-list { max-height: 34vh; }
   .report__level { flex-wrap: wrap; }
 }
+
+/* ---------- Turma online ---------- */
+
+.class-code {
+  margin: 4px 0;
+  font: 700 2.2rem/1 var(--font-display);
+  letter-spacing: .18em;
+  text-align: center;
+  color: var(--crystal);
+  text-shadow: 0 2px 0 var(--line);
+}
+.class-code--small { font-size: 1.05em; letter-spacing: .1em; }
+.cloud-badge { color: var(--crystal); font-size: .85em; }
+.profile-card__hint { grid-column: 1 / -1; color: var(--text-soft); font-size: .72rem; line-height: 1.3; }
+.pin-form h3 { margin: 6px 0 0; font-size: 1rem; color: var(--gold); }

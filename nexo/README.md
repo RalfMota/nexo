@@ -37,31 +37,38 @@ As músicas ficam na pasta `audio/` e tocam em sequência, na ordem da lista `TR
 | 5 | Torre dos Padrões (leste) | Nyla | Grade de Energia; Arquivo da Torre | Generalização (h = 3n + 1); escrita de regras |
 | 6 | Núcleo do Nexo (praça) | Lyra | Reacender o Núcleo | Função afim: teste, valor de entrada, gráfico |
 
+**Desafios extras** (aparecem no menu do personagem; não travam as regiões):
+
+| Desafio | Personagem | Liberado depois de | Conteúdo |
+|---|---|---|---|
+| Jardim Espelhado | Tainá | Vale dos Recursos | Simetria de reflexão (eixo vertical e horizontal) |
+| Cercas do Vale | Tainá | Mercado das Trocas | Perímetro e área: mesmo perímetro com áreas diferentes e vice-versa |
+| Jardim de Nyla | Nyla | Torre dos Padrões | Equação do 2º grau como problema de área (x² = 36; x(x + 2) = 48; x² − 4 = 45) |
+
 ## Como as missões funcionam
 
-As missões não têm formulários nem enunciados longos. O personagem fala uma frase curta, e o jogador age na cena:
+Todas as missões de Matemática acontecem **no próprio mapa**, sem janela: os objetos aparecem perto do personagem da região, o jogador anda até eles e aperta **E** (ou toca) para pegar, levar, plantar, puxar alavancas e girar mostradores. Um rastreador no HUD mostra a etapa, a fala do personagem, as dicas e o Registro técnico. Só o Prólogo (aprender a usar o jogo) ainda é uma cena em janela.
 
-- **Arrastar e soltar:** pegar um objeto (balde, saco, pacote, carrinho, caixa, leitura) e soltar onde ele deve ir.
-- **Tocar e depois tocar no destino:** a mesma ação sem arrastar, para celular e teclado (Tab e Enter).
-- **Pilhas:** cestos, frascos e pilhas entregam uma unidade por toque; segurar entrega várias.
-- **Alavancas, manivelas e corneta:** disparam o que foi montado (abrir a comporta, rodar a máquina, mandar as caravanas).
-- **Mostradores giratórios (▲ ▼):** números de previsão e de regras, sem campo de digitação.
+- **Pegar e levar:** pilhas, cestos e estantes entregam uma unidade por toque; segurar E pega várias. Com as mãos vazias, dá para tirar de volta o que foi colocado.
+- **Alavancas, manivelas e corneta:** disparam o que foi montado (abrir a comporta, rodar a máquina, mandar as caravanas, assentar lajotas).
+- **Mostradores (▼ ▲):** números de previsão e de regras, sem campo de digitação; segurar E gira depressa.
 
-| Missão | O que o jogador faz |
+| Missão | O que o jogador faz no mapa |
 |---|---|
-| Partilha das Sementes | **jogada no próprio mapa, sem janela**: pega sementes no saco (E), leva aos canteiros e se agacha para plantar. Três etapas: contar (3 em cada um de 2 canteiros), repartir (12 em 3) e dividir com resto (50 em 6 com a semeadeira; o resto vai no saco até o celeiro) |
-| Comportas do Vale | **no mapa**: enche baldes no lago (até 3 de uma vez), despeja nas plantações conforme a placa (1/2, 1/3, o resto) e gira a comporta. Etapas: 8, 12 e 18 baldes |
-| Bancas do Mercado | **no mapa**: encosta nas bancas para pôr pacotes no cesto e paga no balcão do Orin. Etapas: exatamente 12 cristais; depois 20 cristais com 48 moedas (desconto de 20% numa banca) |
-| Caldeirão de Orin | **no mapa**: colhe folhas no cesto e orvalho no chafariz, põe no caldeirão e mexe com as mãos vazias. Receita 4 folhas + 6 gotas → 2 frascos; pedidos de 2, 4 e 5 frascos |
-| Máquina de Produção | gira a manivela (a fita imprime ciclo → cristais) e leva o carrinho até a ponte |
-| Previsão | encaixa células e testa (3 vezes); depois gira o mostrador para prever a saída |
-| Custo de Viagem | arrasta o batedor pela estrada para comparar custos; põe cada caixa numa rota e toca a corneta |
-| Ponto de Mudança | finca a placa na distância em que a rota mais barata muda |
-| Grade de Energia | carrega feixes de 10 e hastes soltas e manda montar; depois ajusta a regra do elevador |
-| Arquivo da Torre | lê a pedra com o registro e ajusta a regra de cada selo |
-| Reacender o Núcleo | põe cristais no Núcleo e aciona; gera 50 de energia; leva a leitura gráfica certa até o Núcleo |
-
-Missões de mundo (Vale e Mercado) não abrem janela: os objetos aparecem no mapa, o personagem carrega e planta com animações, e um rastreador no HUD mostra a etapa, a fala do personagem, as dicas e o Registro técnico.
+| Partilha das Sementes | pega sementes no saco, leva aos canteiros e se agacha para plantar. Etapas: contar (3 em cada um de 2 canteiros), repartir (12 em 3) e dividir com resto (50 em 6 com a semeadeira; o resto vai no saco até o celeiro) |
+| Comportas do Vale | enche baldes no lago (até 3 de uma vez), despeja nas plantações conforme a placa (1/2, 1/3, o resto) e gira a comporta. Etapas: 8, 12 e 18 baldes |
+| Bancas do Mercado | encosta nas bancas para pôr pacotes no cesto e paga no balcão do Orin. Etapas: exatamente 12 cristais; depois 20 cristais com 48 moedas (desconto de 20% numa banca) |
+| Caldeirão de Orin | colhe folhas no cesto e orvalho no chafariz, põe no caldeirão e mexe com as mãos vazias. Receita 4 folhas + 6 gotas → 2 frascos; pedidos de 2, 4 e 5 frascos |
+| Máquina de Produção | gira a manivela da máquina (a fita no Registro mostra ciclo → cristais), pega o carrinho e leva até a ponte de carga, que pede exatamente 24 |
+| Previsão | leva células da estante ao conversor e faz 3 testes; depois lê o bilhete do Kael, gira o mostrador com a previsão e puxa a alavanca |
+| Custo de Viagem | encosta nos marcos de légua (0 a 26) para comparar as rotas; leva cada caixa (4, 12 e 20 léguas) à carroça da Rota A ou B e toca a corneta |
+| Ponto de Mudança | finca a placa no marco em que a rota mais barata muda (10 léguas) |
+| Grade de Energia | olha as grades de exemplo no chão, carrega o carrinho com feixes de 10 e hastes soltas e manda montar a grade de 10 módulos; depois grava a regra em dois mostradores e vê os 12 andares do elevador acenderem |
+| Arquivo da Torre | lê o registro sobre cada pedestal e grava a regra nos mostradores |
+| Reacender o Núcleo | leva cristais da pilha ao Núcleo e puxa a alavanca (2 testes); gera exatamente 50 de energia; leva ao Núcleo a tabuleta com o gráfico certo |
+| Jardim Espelhado | pega mudas nos cestos e planta do outro lado do caminho de pedras para espelhar o jardim |
+| Cercas do Vale | leva ao carrinho as tábuas exatas para cercar o canteiro 5 × 3; depois gira largura e comprimento para o cercado de maior área com 20 tábuas e a horta de 24 quadradinhos com menos cerca |
+| Jardim de Nyla | gira o lado x do jardim e manda assentar as lajotas: sobram ou faltam até a área bater com as lajotas que existem |
 
 O contexto completo e o objetivo de cada missão continuam no código e aparecem no Diário (Visão pedagógica).
 
@@ -85,6 +92,8 @@ As regiões se abrem em ordem: uma ruptura de energia bloqueia cada caminho até
 
 ```
 index.html            página (carrega css/ e js/main.js)
+api/                  funções da Vercel: turmas online (turma.js, sync.js, _turmas.js)
+package.json          dependência das funções (@vercel/blob); o site em si não tem build
 css/
   base.css            cores, tipografia, botões, formulários
   screens.css         título e criação de personagem
@@ -93,12 +102,12 @@ css/
   profiles.css        escolha de perfil e Painel do Professor
 js/
   main.js             inicialização
-  core/               estado e salvamento, registro de pesquisa, utilidades de DOM
+  core/               estado e salvamento, turma online (cloud.js), registro de pesquisa, DOM
   data/               regiões, personagens, moradores e grade curricular
   game/               progresso (regiões abertas), sessão de missão (tentativas, dicas, conclusão),
                       estatísticas por missão/etapa e avaliação por tópico (Painel do Professor)
-  missions/           um arquivo por região + playfield.js (mesa de jogo: arrastar, soltar,
-                      alavancas, mostradores), props-art.js (desenho dos objetos) e widgets.js
+  missions/           um arquivo por região (*-world.js: missões no mapa) + world-kit.js
+                      (alavancas, mostradores, etiquetas); prologue.js + playfield.js (cena em janela)
   world/              mapa, renderização, entrada do jogador, história (falas)
   art/                desenho em pixel art: terreno, construções, personagens
   ui/                 telas, HUD, diálogo, janelas, Mapa, Diário, ferramentas
@@ -108,7 +117,7 @@ Cada missão é um objeto com textos (`context`, `goal`, `hints`), dados da Vis�
 
 ### Objetos em pixel art
 
-`js/art/pixel.js` é o motor de pixel art dos objetos: cada um é pintado pixel a pixel (1 pixel da grade = 1 pixel do mundo) com rampas de 5 tons, luz pela normal da superfície (esfera, cilindro, caixa), pontilhado só na troca de tom e contorno na cor escura do material. Os desenhos ficam em cache. `js/art/items.js` tem os objetos das missões (saco de sementes, cuia, semeadeira, baldes, comporta, cesto, caldeirão, pacotes, canteiros e brotos) e `js/art/props.js` os objetos do mapa (postes, caixotes, barris, cercas, placas, mural, bancas, chafariz, bases dos cristais e das engrenagens). Partes que se mexem (roda da semeadeira, volante da comporta, fogo) têm quadros próprios.
+`js/art/pixel.js` é o motor de pixel art dos objetos: cada um é pintado pixel a pixel (1 pixel da grade = 1 pixel do mundo) com rampas de 5 tons, luz pela normal da superfície (esfera, cilindro, caixa), pontilhado só na troca de tom e contorno na cor escura do material. Os desenhos ficam em cache. `js/art/items.js` tem os objetos das missões (saco de sementes, cuia, semeadeira, baldes, comporta, cesto, caldeirão, pacotes, canteiros e brotos) `js/art/mission-props.js` e `js/art/garden-props.js` os das missões da Oficina, Rotas, Torre, Núcleo e dos desafios extras, e `js/art/props.js` os objetos do mapa (postes, caixotes, barris, cercas, placas, mural, bancas, chafariz, bases dos cristais e das engrenagens). Partes que se mexem (roda da semeadeira, volante da comporta, fogo) têm quadros próprios.
 
 ## Perfis: Aluno e Professor
 
@@ -126,7 +135,31 @@ O Painel mostra a lista de alunos (com busca e cadastro) e, para cada um:
 
 Também dá para renomear, zerar o progresso ou excluir um aluno, trocar a senha, **exportar a turma em CSV** (uma linha por aluno e missão, com a situação de cada tópico) e apagar todos os dados do computador.
 
-Tudo fica no `localStorage` deste navegador (chave `nexo_escola_v1`). A senha guarda só um resumo (SHA-256), mas é uma proteção simples: evita que um aluno entre no painel por engano, não protege contra quem tem acesso ao computador. Um save antigo (de antes dos perfis) vira um aluno automaticamente.
+Sem turma online, tudo fica no `localStorage` deste navegador (chave `nexo_escola_v1`). A senha guarda só um resumo (SHA-256), mas é uma proteção simples: evita que um aluno entre no painel por engano, não protege contra quem tem acesso ao computador. Um save antigo (de antes dos perfis) vira um aluno automaticamente.
+
+### Turma online (dados reunidos de vários computadores)
+
+No site publicado, o professor pode juntar a turma inteira, de qualquer computador:
+
+1. No Painel do Professor, **☁ Turma online → Criar uma turma nova** (nome e senha da turma, mínimo de 6 caracteres). O jogo mostra um **código de 6 letras e números** (sem 0/O nem 1/I, fáceis de ditar). A turma já fica ligada a este computador.
+2. Em cada computador da escola, o professor abre a turma e marca **Usar esta turma para os alunos deste computador**. Em casa, o aluno digita o código na tela de título (**Turma online**).
+3. Enquanto o aluno joga, o progresso é enviado sozinho alguns segundos depois de cada mudança (e ao fechar a aba).
+4. No painel, **Abrir uma turma** (código + senha) lista os alunos deste computador e os que jogaram em outros computadores (☁), com o mesmo relatório. **Atualizar alunos** busca de novo.
+
+**O que vai para a internet:** apenas o apelido, a aparência do personagem, as missões concluídas e as estatísticas. Os registros do Modo Pesquisa e o ID de participante ficam no computador. Por isso o cadastro pede **apelido ou código**, não o nome completo.
+
+**Onde fica:** um armazenamento **privado** da Vercel Blob (loja `nexo-turmas`, região de São Paulo, `gru1`), ligado ao projeto `nexo-jornada-matematica`. Nada é acessível por link; só as funções do próprio site leem e escrevem. Organização: `turmas/<CÓDIGO>/turma.json` (nome e resumo scrypt da senha, com sal) e `turmas/<CÓDIGO>/alunos/<ID>.json`.
+
+**Rotas** (pasta `api/`, funções da Vercel):
+
+| Rota | Quem usa | O que faz |
+|---|---|---|
+| `POST /api/turma` `{acao: 'criar', nome, senha}` | professor | cria a turma e devolve o código |
+| `POST /api/turma` `{acao: 'ler', codigo, senha}` | professor | devolve os alunos da turma (só com a senha certa) |
+| `POST /api/turma` `{acao: 'remover', codigo, senha, id}` | professor | apaga um aluno da turma |
+| `POST /api/sync` `{codigo, aluno}` | jogo do aluno | regrava o arquivo daquele aluno (o servidor descarta qualquer campo fora do esperado) |
+
+Limites conhecidos: quem tem o código pode enviar progresso para a turma (não pode ler); a senha da turma é a única proteção da leitura. A turma online só funciona no site publicado (ou com `npx vercel dev`); no servidor local simples (`python -m http.server`), o jogo avisa que não conseguiu enviar e continua normalmente.
 
 ### Grade curricular
 
@@ -136,7 +169,7 @@ Tudo fica no `localStorage` deste navegador (chave `nexo_escola_v1`). A senha gu
 |---|---|---|
 | Anos Iniciais | contagem, adição, subtração, multiplicação, divisão, frações (metade, terço) | Partilha das Sementes, Comportas do Vale, Bancas do Mercado, Máquina de Produção |
 | Anos Finais | frações de quantidades, razão, porcentagem, proporcionalidade, relações entre grandezas, linguagem algébrica, equação do 1º grau, função afim | Comportas, Bancas, Caldeirão, Oficina, Rotas, Torre, Núcleo |
-| Em breve | geometria (formas e simetria; perímetro e área), equação do 2º grau | ainda sem missão: o painel mostra a ideia planejada |
+| Desafios extras | simetria de reflexão; perímetro e área; equação do 2º grau | Jardim Espelhado, Cercas do Vale, Jardim de Nyla |
 
 O motor de missões (`js/game/session.js`) grava em `js/game/stats.js`, para cada missão e etapa, acertos (`api.attempt(true)`), erros (`api.attempt(false)`), dicas, apoios automáticos e tempo. `js/game/assessment.js` cruza essas contagens com a grade para montar o relatório. As etapas são informadas pelas missões com `api.setStage(i)`.
 

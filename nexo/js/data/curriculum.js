@@ -12,6 +12,9 @@
  *   r1b Comportas do Vale:     0 metade (8 baldes), 1 metade e terço (12), 2 depois da chuva (18)
  *   r2a Bancas do Mercado:     0 juntar 12 cristais, 1 comparar preços com desconto
  *   r2b Caldeirão de Orin:     0 receita, 1 dobro, 2 proporção (5 frascos)
+ *   r1c Jardim Espelhado:      0 eixo vertical, 1 duas cores, 2 eixo horizontal (extra)
+ *   r1d Cercas do Vale:        0 perímetro, 1 mesmo perímetro e mais área, 2 mesma área e menos cerca (extra)
+ *   r5c Jardim de Nyla:        0 x² = 36, 1 x(x + 2) = 48, 2 x² − 4 = 45 (extra)
  */
 
 export const BANDS = [
@@ -71,12 +74,11 @@ export const TOPICS = [
   },
   {
     id: 'geometria_formas',
-    name: 'Geometria: formas planas e simetria',
+    name: 'Geometria: simetria de reflexão',
     band: 'iniciais',
-    years: '1º ao 5º ano',
+    years: '4º e 5º ano',
     unit: 'Geometria',
-    links: [],
-    planned: 'Vitrais da Torre: montar janelas com triângulos, quadrados e hexágonos, procurando eixos de simetria.',
+    links: [{ mission: 'r1c' }],
   },
 
   // Anos Finais
@@ -150,8 +152,7 @@ export const TOPICS = [
     band: 'finais',
     years: '6º ao 8º ano',
     unit: 'Grandezas e medidas',
-    links: [],
-    planned: 'Cercas do Vale: cercar canteiros com tábuas contadas e comparar quanto cada formato planta.',
+    links: [{ mission: 'r1d' }],
   },
   {
     id: 'equacao2',
@@ -159,8 +160,7 @@ export const TOPICS = [
     band: 'finais',
     years: '9º ano',
     unit: 'Álgebra',
-    links: [],
-    planned: 'Jardim de Nyla: descobrir o lado de um canteiro quadrado a partir da área (x² = 36) e, depois, de um retângulo com lado x + 2.',
+    links: [{ mission: 'r5c' }],
   },
 ];
 

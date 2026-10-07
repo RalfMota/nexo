@@ -75,8 +75,9 @@ export function showProfiles() {
               <span class="avatar avatar--add" aria-hidden="true">+</span>
               <label class="profile-card__new">
                 <span class="profile-card__name">Novo aluno</span>
-                <input name="name" maxlength="24" placeholder="Seu nome" autocomplete="off" aria-label="Nome do novo aluno">
+                <input name="name" maxlength="24" placeholder="Apelido ou código" autocomplete="off" aria-label="Apelido ou código do novo aluno" aria-describedby="nickname-hint">
               </label>
+              <small class="profile-card__hint" id="nickname-hint">Use um apelido ou o código que o professor deu, não o nome completo.</small>
               <button type="submit" class="btn btn--crystal btn--small">Entrar</button>
             </form>
           </div>

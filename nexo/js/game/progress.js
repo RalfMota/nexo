@@ -1,6 +1,7 @@
 /* NEXO — Progresso: regiões abertas, concluídas e objetivo atual */
 
-import { REGIONS, regionIndexOf } from '../data/regions.js';
+import { REGIONS, regionById, regionIndexOf } from '../data/regions.js';
+import { MISSIONS } from '../missions/index.js';
 import { CHARACTERS } from '../data/characters.js';
 import { state } from '../core/state.js';
 
@@ -16,6 +17,16 @@ export function isRegionOpen(index) {
 }
 
 export const isRegionOpenById = (regionId) => isRegionOpen(regionIndexOf(regionId));
+
+/** Desafio extra liberado: a região indicada em unlockAfter já foi concluída (ou modo debug). */
+export function isExtraUnlocked(missionId) {
+  const mission = MISSIONS[missionId];
+  if (!mission?.extra) return false;
+  return state.dbg || isRegionDone(regionById(mission.unlockAfter));
+}
+
+/** Desafios extras de uma região que já estão liberados. */
+export const unlockedExtras = (region) => (region.extras ?? []).filter(isExtraUnlocked);
 
 export const countDoneRegions = () => REGIONS.filter(isRegionDone).length;
 

@@ -3,7 +3,7 @@
 import { CHARACTERS } from '../data/characters.js';
 import { REGIONS, regionById, regionIndexOf } from '../data/regions.js';
 import { MISSIONS } from '../missions/index.js';
-import { isMissionDone, isRegionDone, isRegionOpen, isRegionOpenById, currentRegion, countDoneRegions } from '../game/progress.js';
+import { isMissionDone, isRegionDone, isRegionOpen, isRegionOpenById, currentRegion, countDoneRegions, unlockedExtras } from '../game/progress.js';
 import { startMission } from '../game/session.js';
 import { showDialogue } from '../ui/dialogue.js';
 import { runtime } from '../core/runtime.js';
@@ -63,9 +63,25 @@ export function interact(target) {
 
 function missionChoices(missionIds) {
   return [
-    ...missionIds.map((id) => ({ label: MISSIONS[id].title, done: isMissionDone(id), onSelect: () => startMission(id) })),
+    ...missionIds.map((id) => ({
+      label: MISSIONS[id].extra ? `Desafio extra: ${MISSIONS[id].title}` : MISSIONS[id].title,
+      done: isMissionDone(id),
+      onSelect: () => startMission(id),
+    })),
     { label: 'Depois' },
   ];
+}
+
+/** Missões que o guardião oferece: as da região e os desafios extras já liberados. */
+const offeredMissions = (region) => [...region.missions, ...unlockedExtras(region)];
+
+/** Avisa quando há um desafio extra novo (liberado e ainda não feito). */
+function extraNote(region) {
+  const fresh = unlockedExtras(region).filter((id) => !isMissionDone(id));
+  if (!fresh.length) return '';
+  return fresh.length === 1
+    ? ` Ah, e tenho um desafio extra para você: ${MISSIONS[fresh[0]].title}.`
+    : ` Ah, e tenho ${fresh.length} desafios extras para você.`;
 }
 
 /** Frase que leva o jogador à próxima região, quando ela é de outro personagem. */
@@ -84,10 +100,10 @@ function talkToGuardian(npcId) {
     return showDialogue({ npcId, text: 'Ainda não é hora. Uma ruptura separa esta região do resto do Nexo.' });
   }
   if (isRegionDone(region)) {
-    return showDialogue({ npcId, text: lines.done + nextStepHint(npcId), choices: missionChoices(region.missions) });
+    return showDialogue({ npcId, text: lines.done + extraNote(region) + nextStepHint(npcId), choices: missionChoices(offeredMissions(region)) });
   }
   const started = region.missions.some(isMissionDone);
-  return showDialogue({ npcId, text: started ? lines.back : lines.intro, choices: missionChoices(region.missions) });
+  return showDialogue({ npcId, text: (started ? lines.back : lines.intro) + extraNote(region), choices: missionChoices(offeredMissions(region)) });
 }
 
 function talkToLyra() {

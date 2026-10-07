@@ -3,6 +3,7 @@
 import { applySettings } from './core/state.js';
 import { showProfiles } from './ui/profile-screen.js';
 import { initMusic } from './core/music.js';
+import { initCloudSync } from './core/cloud.js';
 
 /** As fontes precisam estar carregadas antes de pintar as placas do mapa. */
 function waitForFonts(timeout = 1500) {
@@ -13,4 +14,5 @@ function waitForFonts(timeout = 1500) {
 
 applySettings();
 initMusic();
+initCloudSync();
 waitForFonts().then(showProfiles);

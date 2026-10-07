@@ -24,6 +24,7 @@ export const STATUS = {
 };
 
 const MATH_MISSIONS = REGIONS.flatMap((region) => region.missions).filter((id) => id !== 'p0');
+const EXTRA_MISSIONS = REGIONS.flatMap((region) => region.extras ?? []);
 
 const ratio = (correct, wrong) => (correct + wrong ? correct / (correct + wrong) : null);
 
@@ -70,13 +71,14 @@ export function studentReport(student) {
   const done = save.done ?? {};
   const stats = save.stats ?? {};
 
-  const missions = MATH_MISSIONS.concat('p0').map((id) => {
+  const missions = [...MATH_MISSIONS, ...EXTRA_MISSIONS, 'p0'].map((id) => {
     const entry = stats[id] ?? {};
     const record = done[id];
     return {
       id,
       title: MISSIONS[id]?.title ?? id,
-      region: REGIONS.find((region) => region.missions.includes(id)),
+      extra: EXTRA_MISSIONS.includes(id),
+      region: REGIONS.find((region) => region.missions.includes(id) || region.extras?.includes(id)),
       done: Boolean(record),
       support: record?.sup ?? null,
       starts: entry.starts ?? 0,
@@ -90,6 +92,7 @@ export function studentReport(student) {
     };
   });
   const math = missions.filter((mission) => mission.id !== 'p0');
+  const main = math.filter((mission) => !mission.extra);
 
   const totals = math.reduce(
     (sum, mission) => ({
@@ -100,7 +103,8 @@ export function studentReport(student) {
     }),
     { correct: 0, wrong: 0, hints: 0, sec: 0 },
   );
-  const doneCount = math.filter((mission) => mission.done).length;
+  // Nível e progresso contam só as missões principais; os extras entram nas métricas e nos tópicos
+  const doneCount = main.filter((mission) => mission.done).length;
   const solved = math.filter((mission) => mission.bestSec != null && mission.done);
 
   // Nível: a primeira região ainda não concluída (as regiões abrem em ordem)
@@ -117,8 +121,10 @@ export function studentReport(student) {
     levelName: REGIONS[level]?.name ?? 'Jornada concluída',
     levelCount: REGIONS.length,
     doneCount,
-    missionCount: math.length,
-    progress: math.length ? doneCount / math.length : 0,
+    missionCount: main.length,
+    extrasDone: math.filter((mission) => mission.extra && mission.done).length,
+    extrasCount: EXTRA_MISSIONS.length,
+    progress: main.length ? doneCount / main.length : 0,
     totals: { ...totals, accuracy: ratio(totals.correct, totals.wrong) },
     avgSec: solved.length ? Math.round(solved.reduce((sum, mission) => sum + mission.bestSec, 0) / solved.length) : null,
     missions,
