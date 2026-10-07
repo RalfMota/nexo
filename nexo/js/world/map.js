@@ -65,6 +65,7 @@ export const BUILDINGS = [
   { kind: 'workshop', x: 26, y: 3, w: 8, h: 4, label: 'OFICINA' },
   { kind: 'station', x: 4, y: 3, w: 5, h: 3, label: 'ESTAÇÃO' },
   { kind: 'tower', x: 48, y: 10, w: 5, h: 8, label: 'TORRE' },
+  { kind: 'lab', x: 33, y: 39, w: 3, h: 2, label: 'POÇÕES' }, // laboratório do Orin, no Mercado
 ];
 
 /** Núcleo do Nexo: estrutura central da praça. */
@@ -151,7 +152,7 @@ export const DECOR = [];
 /** Pontos de missão e de passagem que precisam ficar livres (raio de 2 blocos). */
 const RESERVED = [
   [11, 21], [8, 24], [5, 17], [11, 18], [8, 18], [8, 31], [5, 25], [11, 25],
-  [24, 36], [27, 36], [34, 36], [35, 37], [38, 40], [23, 38], [30, 41], [26, 38],
+  [24, 36], [27, 36], [34, 36], [35, 37], [38, 40], [23, 38], [30, 41], [26, 38], [34, 41],
 ];
 const occupied = new Set();
 const mark = (x, y, w = 1, h = 1) => {

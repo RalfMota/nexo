@@ -5,14 +5,11 @@
  *   1. Agrupar: exatamente 12 cristais (pacotes de 4, 6 e 5).
  *   2. Comparar preços: pelo menos 20 cristais sem passar de 48 moedas (uma banca com 20% de desconto).
  *
- * Caldeirão de Orin: colhe folhas no cesto, pega orvalho no chafariz, leva ao caldeirão
- * e mexe com as mãos vazias. A receita do bilhete: 4 folhas + 6 gotas → 2 frascos.
- *   1. Receita: 2 frascos.  2. Dobro: 4 frascos.  3. Proporção: 5 frascos.
+ * (O Caldeirão de Orin, r2b, acontece no laboratório de poções: ver potion-lab.js.)
  */
 
 import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
-import { drawCrystal } from '../art/shapes.js';
-import { drawCrystalPack, drawWickerBasket, drawIronCauldron } from '../art/items.js';
+import { drawCrystalPack, drawWickerBasket } from '../art/items.js';
 
 const TILE = 32;
 
@@ -199,182 +196,6 @@ function mountStallsWorld(api) {
   startStage(0);
 }
 
-/* ======================================================================
- * r2b: Caldeirão de Orin
- * ==================================================================== */
-
-const RECIPE = { flasks: 2, leaves: 4, dew: 6 }; // razão folhas : gotas = 2 : 3
-const MAX_IN_HAND = 15;
-const LEAF_BASKET = { x: 23 * TILE, y: 38 * TILE + 24 };
-const FOUNTAIN = { x: 30 * TILE + 16, y: 41 * TILE + 6 };
-const CAULDRON = { x: 26 * TILE + 16, y: 38 * TILE + 24 };
-
-const BREW_STAGES = [
-  { label: 'Receita', order: 2, intro: 'Siga o bilhete da receita: 4 folhas e 6 gotas de orvalho fazem 2 frascos. Quando tudo estiver no caldeirão, mexa com as mãos vazias.' },
-  { label: 'Dobro', order: 4, intro: 'Saiu no ponto! Agora um cliente quer 4 frascos.' },
-  { label: 'Proporção', order: 5, intro: 'Mais um pedido, e esse é chato: 5 frascos. Não dá para só dobrar a receita.' },
-];
-
-function mountCauldronWorld(api) {
-  let stageIndex = 0;
-  let hand = { kind: null, count: 0 };
-  let leaves = 0;
-  let dew = 0;
-  let mood = 'idle'; // idle | ok | spoiled
-  const rows = [];
-
-  const stage = () => BREW_STAGES[stageIndex];
-  const record = () => api.record(['Pedido', 'Folhas', 'Gotas', 'Resultado'], rows);
-
-  const handItem = {
-    label: 'ingredientes',
-    draw: (ctx) => {
-      for (let i = 0; i < Math.min(hand.count, 5); i++) {
-        if (hand.kind === 'leaf') {
-          ctx.fillStyle = i % 2 ? '#7fd36a' : '#5aa84a';
-          ctx.fillRect(-7 + i * 3, -4 - (i % 2), 4, 2);
-        } else {
-          ctx.fillStyle = '#8fd0f5';
-          ctx.fillRect(-6 + i * 3, -5, 2, 3);
-          ctx.fillStyle = '#e6f7ff';
-          ctx.fillRect(-6 + i * 3, -5, 1, 1);
-        }
-      }
-      drawTag(ctx, 0, -14, `${hand.count} ${hand.kind === 'leaf' ? 'folhas' : 'gotas'}`);
-    },
-  };
-  const refreshHands = () => setCarried(hand.count ? handItem : null);
-
-  function gather(kind, x, y) {
-    if (hand.count && hand.kind !== kind) {
-      api.say(`Suas mãos estão com ${hand.kind === 'leaf' ? 'folhas' : 'gotas'}. Ponha no caldeirão antes de pegar outra coisa.`, 'warn');
-      return;
-    }
-    if (hand.count >= MAX_IN_HAND) {
-      api.say('Suas mãos estão cheias.', 'warn');
-      return;
-    }
-    hand = { kind, count: hand.count + 1 };
-    playAction('harvest');
-    burst(x, y - 10, 'sparkle', 3);
-    refreshHands();
-  }
-
-  addQuestObject({
-    id: 'leaf-basket',
-    x: LEAF_BASKET.x,
-    y: LEAF_BASKET.y,
-    label: 'Cesto de folhas-lunares',
-    draw: (ctx) => drawLeafBasket(ctx, LEAF_BASKET.x, LEAF_BASKET.y),
-    onInteract: () => gather('leaf', LEAF_BASKET.x, LEAF_BASKET.y),
-  });
-
-  addQuestObject({
-    id: 'fountain-dew',
-    x: FOUNTAIN.x,
-    y: FOUNTAIN.y,
-    label: 'Orvalho do chafariz',
-    draw: (ctx) => drawTag(ctx, FOUNTAIN.x, FOUNTAIN.y - 14, 'orvalho'),
-    onInteract: () => gather('dew', FOUNTAIN.x, FOUNTAIN.y),
-  });
-
-  addQuestObject({
-    id: 'cauldron',
-    x: CAULDRON.x,
-    y: CAULDRON.y,
-    label: 'Caldeirão: pôr ingredientes ou, com as mãos vazias, mexer',
-    draw: (ctx, t) => drawCauldron(ctx, CAULDRON.x, CAULDRON.y, leaves, dew, mood, stage().order, t),
-    onInteract: useCauldron,
-  });
-
-  function useCauldron() {
-    if (hand.count) {
-      if (hand.kind === 'leaf') leaves++;
-      else dew++;
-      hand = hand.count > 1 ? { kind: hand.kind, count: hand.count - 1 } : { kind: null, count: 0 };
-      mood = 'idle';
-      playAction('use');
-      burst(CAULDRON.x, CAULDRON.y - 18, 'sparkle', 3);
-      refreshHands();
-      return;
-    }
-    stir();
-  }
-
-  function stir() {
-    if (!leaves || !dew) {
-      api.say('Ponha folhas e orvalho no caldeirão antes de mexer.', 'warn');
-      return;
-    }
-    playAction('use');
-    const order = stage().order;
-    const balance = leaves * RECIPE.dew - dew * RECIPE.leaves; // zero quando a razão é a da receita
-    const flasks = (leaves / RECIPE.leaves) * RECIPE.flasks;
-    const ok = api.attempt(balance === 0 && flasks === order, { etapa: stageIndex + 1, encomenda: order, folhas: leaves, gotas: dew });
-    rows.push([order, leaves, dew, balance === 0 ? { value: `${flasks} frascos`, tone: ok ? 'good' : 'bad' } : { value: 'desandou', tone: 'bad' }]);
-    record();
-
-    if (balance !== 0) {
-      mood = 'spoiled';
-      burst(CAULDRON.x, CAULDRON.y - 20, 'dust', 12);
-      api.fail(balance > 0
-        ? 'A mistura desandou: ficou verde-escura e grossa, com folha demais para tanto orvalho. Orin jogou fora; comece de novo.'
-        : 'A mistura desandou: ficou rala e sem brilho, com orvalho demais para tão poucas folhas. Orin jogou fora; comece de novo.');
-      setTimeout(() => {
-        leaves = 0;
-        dew = 0;
-        mood = 'idle';
-      }, 1200);
-      return;
-    }
-    if (!ok) {
-      mood = 'idle';
-      api.fail(`A mistura ficou no ponto e rendeu ${flasks} frascos, mas o pedido é de ${order}. Orin guardou e esvaziou o caldeirão.`);
-      leaves = 0;
-      dew = 0;
-      return;
-    }
-    mood = 'ok';
-    burst(CAULDRON.x, CAULDRON.y - 24, 'success', 20);
-    if (stageIndex === BREW_STAGES.length - 1) {
-      api.win('Os três pedidos saíram no ponto. A banca de poções de Orin reabriu!');
-      return;
-    }
-    api.say(BREW_STAGES[stageIndex + 1].intro, 'ok');
-    setTimeout(() => api.isActive() && startStage(stageIndex + 1), 2400);
-  }
-
-  function startStage(index) {
-    stageIndex = index;
-    leaves = 0;
-    dew = 0;
-    mood = 'idle';
-    hand = { kind: null, count: 0 };
-    refreshHands();
-    api.setStage(index);
-    api.setObjective(`Pedido: ${stage().order} frascos. Receita: 4 folhas + 6 gotas → 2 frascos.`);
-    if (index === 0) api.say(stage().intro);
-  }
-
-  api.onCleanup(clearQuestLayer);
-  record();
-  startStage(0);
-}
-
-function drawLeafBasket(ctx, x, y) {
-  drawWickerBasket(ctx, x, y);
-  drawTag(ctx, x, y - 26, 'folhas');
-}
-
-function drawCauldron(ctx, x, y, leaves, dew, mood, order, t) {
-  const liquid = mood === 'ok' ? '#5fe3d0' : mood === 'spoiled' ? '#3d6b2a' : leaves || dew ? '#4f7f9a' : '#2b3550';
-  drawIronCauldron(ctx, x, y, liquid, t, mood === 'ok' ? 1.6 : 0.7);
-  if (mood === 'ok') drawCrystal(ctx, x, y - 34 + Math.sin(t * 3) * 2, 4, { glow: 1.4 });
-  drawTag(ctx, x - 22, y - 38, `${leaves} folhas`);
-  drawTag(ctx, x + 22, y - 38, `${dew} gotas`);
-  drawTag(ctx, x, y - 54, `pedido: ${order} frascos`, { fill: '#fff6dc' });
-}
-
 export default {
   r2a: {
     title: 'Bancas do Mercado',
@@ -395,25 +216,5 @@ export default {
       'Escolha a banca em que cada cristal sai mais barato e veja quantos pacotes dela chegam a 20 cristais.',
     ],
     mountWorld: mountStallsWorld,
-  },
-  r2b: {
-    title: 'Caldeirão de Orin',
-    region: 'r2',
-    npc: 'orin',
-    mode: 'world',
-    stages: BREW_STAGES.map((stage) => stage.label),
-    greeting: BREW_STAGES[0].intro,
-    context: 'A poção de brilho de Orin só fica no ponto quando folhas-lunares e gotas de orvalho entram na medida da receita: 4 folhas e 6 gotas rendem 2 frascos. Os pedidos mudam de tamanho.',
-    goal: 'Preparar 2, 4 e 5 frascos mantendo a proporção da receita.',
-    concept: 'Proporcionalidade direta: manter a razão entre ingredientes ao mudar a quantidade',
-    prerequisites: 'Razão; multiplicação e divisão (Bancas do Mercado)',
-    relation: 'folhas = 2 × frascos; gotas = 3 × frascos (folhas : gotas = 2 : 3)',
-    categories: ['proporcionalidade', 'relações entre grandezas'],
-    hints: [
-      'Pegue folhas no cesto e orvalho no chafariz (segure E para pegar várias). Leve ao caldeirão e aperte E para pôr. Com as mãos vazias, E no caldeirão mexe a poção.',
-      'Se a quantidade de frascos dobra, os dois ingredientes dobram juntos. Se só um muda, a mistura desanda.',
-      'Descubra quanto de cada ingrediente vai em 1 frasco e multiplique pela quantidade do pedido.',
-    ],
-    mountWorld: mountCauldronWorld,
   },
 };

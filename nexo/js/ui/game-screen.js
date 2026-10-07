@@ -25,7 +25,7 @@ export function showGame() {
   const app = qs('#app');
   app.innerHTML = `
     <div class="game">
-      <canvas class="game__world" role="img" aria-label="Vila de Nexo. Ande com WASD ou setas, ou clique no destino. Pressione E perto de alguém para conversar."></canvas>
+      <div class="game__world" role="img" aria-label="Vila de Nexo. Ande com WASD ou setas, ou clique no destino. Pressione E perto de alguém ou de uma porta para conversar ou entrar."></div>
       ${hudMarkup()}
       <div class="touch-pad" aria-hidden="true">
         <button type="button" class="up" data-key="w">▲</button>

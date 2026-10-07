@@ -47,7 +47,7 @@ As músicas ficam na pasta `audio/` e tocam em sequência, na ordem da lista `TR
 
 ## Como as missões funcionam
 
-Todas as missões de Matemática acontecem **no próprio mapa**, sem janela: os objetos aparecem perto do personagem da região, o jogador anda até eles e aperta **E** (ou toca) para pegar, levar, plantar, puxar alavancas e girar mostradores. Um rastreador no HUD mostra a etapa, a fala do personagem, as dicas e o Registro técnico. Só o Prólogo (aprender a usar o jogo) ainda é uma cena em janela.
+Todas as missões de Matemática acontecem **no próprio mapa** (a Grade de Energia, por dentro da Torre; o Caldeirão de Orin, no laboratório de poções), sem janela: os objetos aparecem perto do personagem da região, o jogador anda até eles e aperta **E** (ou toca) para pegar, levar, plantar, puxar alavancas e girar mostradores. Um rastreador no HUD mostra a etapa, a fala do personagem, as dicas e o Registro técnico. Só o Prólogo (aprender a usar o jogo) ainda é uma cena em janela.
 
 - **Pegar e levar:** pilhas, cestos e estantes entregam uma unidade por toque; segurar E pega várias. Com as mãos vazias, dá para tirar de volta o que foi colocado.
 - **Alavancas, manivelas e corneta:** disparam o que foi montado (abrir a comporta, rodar a máquina, mandar as caravanas, assentar lajotas).
@@ -58,12 +58,12 @@ Todas as missões de Matemática acontecem **no próprio mapa**, sem janela: os 
 | Partilha das Sementes | pega sementes no saco, leva aos canteiros e se agacha para plantar. Etapas: contar (3 em cada um de 2 canteiros), repartir (12 em 3) e dividir com resto (50 em 6 com a semeadeira; o resto vai no saco até o celeiro) |
 | Comportas do Vale | enche baldes no lago (até 3 de uma vez), despeja nas plantações conforme a placa (1/2, 1/3, o resto) e gira a comporta. Etapas: 8, 12 e 18 baldes |
 | Bancas do Mercado | encosta nas bancas para pôr pacotes no cesto e paga no balcão do Orin. Etapas: exatamente 12 cristais; depois 20 cristais com 48 moedas (desconto de 20% numa banca) |
-| Caldeirão de Orin | colhe folhas no cesto e orvalho no chafariz, põe no caldeirão e mexe com as mãos vazias. Receita 4 folhas + 6 gotas → 2 frascos; pedidos de 2, 4 e 5 frascos |
+| Caldeirão de Orin | **no laboratório de poções do Orin** (prédio "Poções" no sul do Mercado): pega folhas-lunares e orvalho nos armários de vidro (as portas abrem), põe no caldeirão e mexe com as mãos vazias. A receita fica na parede: 4 folhas + 6 gotas → 2 frascos; pedidos de 2, 4 e 5 frascos. Os frascos prontos aparecem na bancada |
 | Máquina de Produção | gira a manivela da máquina (a fita no Registro mostra ciclo → cristais), pega o carrinho e leva até a ponte de carga, que pede exatamente 24 |
 | Previsão | leva células da estante ao conversor e faz 3 testes; depois lê o bilhete do Kael, gira o mostrador com a previsão e puxa a alavanca |
 | Custo de Viagem | encosta nos marcos de légua (0 a 26) para comparar as rotas; leva cada caixa (4, 12 e 20 léguas) à carroça da Rota A ou B e toca a corneta |
 | Ponto de Mudança | finca a placa no marco em que a rota mais barata muda (10 léguas) |
-| Grade de Energia | olha as grades de exemplo no chão, carrega o carrinho com feixes de 10 e hastes soltas e manda montar a grade de 10 módulos; depois grava a regra em dois mostradores e vê os 12 andares do elevador acenderem |
+| Grade de Energia | **por dentro da Torre, andar por andar**: nos três primeiros andares acende a grade da parede (1, 2 e 3 módulos) levando hastes ao pedestal de energia, uma por vez, e a porta do andar seguinte abre; no 4º, carrega o carrinho para a grade de 10 módulos, que só acende de uma vez; no topo, põe blocos de energia (quanto cada módulo acrescenta) e engrenagens (hastes fixas) nos pedestais e vê as 12 lâmpadas dos andares ficarem verdes ou vermelhas em tempo real |
 | Arquivo da Torre | lê o registro sobre cada pedestal e grava a regra nos mostradores |
 | Reacender o Núcleo | leva cristais da pilha ao Núcleo e puxa a alavanca (2 testes); gera exatamente 50 de energia; leva ao Núcleo a tabuleta com o gráfico certo |
 | Jardim Espelhado | pega mudas nos cestos e planta do outro lado do caminho de pedras para espelhar o jardim |
@@ -73,6 +73,27 @@ Todas as missões de Matemática acontecem **no próprio mapa**, sem janela: os 
 O contexto completo e o objetivo de cada missão continuam no código e aparecem no Diário (Visão pedagógica).
 
 As regiões se abrem em ordem: uma ruptura de energia bloqueia cada caminho até a região anterior ser concluída. As missões podem ser refeitas. Os números das missões são escolhas de design e precisam passar por teste com estudantes antes de valerem como instrumento.
+
+## Motor do jogo (Phaser 3)
+
+O mundo roda no **Phaser 3.90** (`vendor/phaser.esm.min.js`, licença MIT em `vendor/PHASER-LICENSE.md`; o arquivo fica no projeto, sem depender de CDN). O código fica em `js/engine/`:
+
+| Arquivo | O que faz |
+|---|---|
+| `engine.js` | cria o jogo, ajusta a resolução (telas densas), liga teclado/toque à cena ativa e expõe as mesmas funções de antes (`startWorld`, `getPlayerPosition`, `placePlayer`...) |
+| `world-scene.js` | cena **Mundo**: mapa (textura), colisão com camada de blocos + Arcade Physics (as rupturas entram e saem da camada), câmera, personagens e árvores ordenados pela altura dos pés, copas balançando com o vento, portas dos prédios |
+| `interior-scene.js` | cena **Interior**: cômodo com paredes e móveis como corpos estáticos, saída pela porta de baixo, andares (a cena recomeça no novo andar) |
+| `interiors.js` | planta de cada tipo de prédio (casas, celeiro, oficina, estação, laboratório de poções, saguão da torre) e o registro para uma missão assumir um interior |
+| `player.js` | estado do jogador entre as cenas, corpo físico (caixa de 14 × 7 px nos pés), movimento, clicar para andar |
+| `actor-view.js` | personagem como sprite do Phaser (a pixel art continua vindo de `art/sprite.js`) com sombra e squash and stretch |
+| `fx.js` | partículas do Phaser (brilho e terra) e o efeito de **brotar** (tween com quique) |
+| `canvas-layer.js` | camadas de canvas do tamanho da tela para o que ainda é pintado com a API de canvas (água, grama, objetos das missões no mapa, etiquetas, chuva, luz); os textos ficam nítidos |
+
+**Entrar num prédio:** perto da porta, aperte **E**: a tela escurece (fade), o interior carrega e clareia. Para sair, ande pelo vão da porta de baixo ou aperte E nela. Na Torre, durante a Grade de Energia, a porta de cima leva ao andar seguinte e a de baixo desce um andar.
+
+**Objetos que brotam:** os objetos das missões não aparecem "secos": ao começar uma missão (ou numa nova etapa) eles brotam do chão com um quique, e o Phaser solta partículas de terra e brilho no ponto.
+
+O jogo usa o renderizador de canvas do Phaser, para que as camadas de canvas não precisem ser reenviadas à placa de vídeo a cada quadro. A tela de título, a criação de personagem e as janelas (Diário, Painel) continuam em HTML.
 
 ## Animação e cenário
 
@@ -93,6 +114,7 @@ As regiões se abrem em ordem: uma ruptura de energia bloqueia cada caminho até
 ```
 index.html            página (carrega css/ e js/main.js)
 api/                  funções da Vercel: turmas online (turma.js, sync.js, _turmas.js)
+vendor/               Phaser 3.90 (módulo ES) e a licença MIT dele
 package.json          dependência das funções (@vercel/blob); o site em si não tem build
 css/
   base.css            cores, tipografia, botões, formulários
@@ -108,7 +130,8 @@ js/
                       estatísticas por missão/etapa e avaliação por tópico (Painel do Professor)
   missions/           um arquivo por região (*-world.js: missões no mapa) + world-kit.js
                       (alavancas, mostradores, etiquetas); prologue.js + playfield.js (cena em janela)
-  world/              mapa, renderização, entrada do jogador, história (falas)
+  engine/             motor Phaser: cenas Mundo e Interior, jogador, efeitos (ver "Motor do jogo")
+  world/              mapa, camadas de desenho, entrada (teclado/toque), história (falas), moradores, clima
   art/                desenho em pixel art: terreno, construções, personagens
   ui/                 telas, HUD, diálogo, janelas, Mapa, Diário, ferramentas
 ```

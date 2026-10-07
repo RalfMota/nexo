@@ -8,6 +8,7 @@ import { startMission } from '../game/session.js';
 import { showDialogue } from '../ui/dialogue.js';
 import { runtime } from '../core/runtime.js';
 import { talkToVillager } from './villagers.js';
+import { enterBuilding } from '../engine/engine.js';
 
 /** Falas dos guardiões de região: primeira conversa, retorno e região concluída. */
 const LINES = {
@@ -48,6 +49,8 @@ export function interact(target) {
       return talkToVillager(target.villager);
     case 'quest':
       return target.object.onInteract();
+    case 'door':
+      return enterBuilding(target.building);
     case 'npc':
       return target.id === 'lyra' ? talkToLyra() : talkToGuardian(target.id);
     case 'sign':

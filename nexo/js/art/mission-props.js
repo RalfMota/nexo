@@ -485,33 +485,6 @@ export function drawRodPile(ctx, x, y, bundles) {
   blit(ctx, sprite(`rods:${bundles}`, () => buildRodPile(bundles)), x, y);
 }
 
-/** Grade de hastes de luz no chão: `modules` quadrados lado a lado; hastes faltando ficam apagadas. */
-export function drawLightGrid(ctx, left, bottom, modules, { cell = 10, rods = null, t = 0 } = {}) {
-  const needed = 3 * modules + 1;
-  const lit = rods == null ? needed : Math.min(rods, needed);
-  let drawn = 0;
-  const glow = 0.75 + Math.sin(t * 3) * 0.2;
-  const seg = (x, y, w, h) => {
-    const on = drawn < lit;
-    drawn++;
-    ctx.fillStyle = on ? `rgba(127, 230, 255, ${glow})` : 'rgba(60, 70, 90, .7)';
-    ctx.fillRect(Math.round(x), Math.round(y), w, h);
-  };
-  const top = bottom - cell;
-  seg(left, top, 1, cell + 1); // primeira haste vertical
-  for (let i = 0; i < modules; i++) {
-    const x = left + i * cell;
-    seg(x, top, cell + 1, 1);
-    seg(x, bottom, cell + 1, 1);
-    seg(x + cell, top, 1, cell + 1);
-  }
-  if (rods != null && rods > needed) {
-    // Hastes que sobraram, jogadas no chão
-    ctx.fillStyle = 'rgba(127, 230, 255, .8)';
-    for (let i = 0; i < Math.min(8, rods - needed); i++) ctx.fillRect(Math.round(left + modules * cell + 6 + i * 3), Math.round(bottom - 2 - (i % 2) * 2), 2, 1);
-  }
-}
-
 /* ---------- Pedestal de pedra com tabuleta (Torre e Núcleo) ---------- */
 
 function buildPedestal(lit) {

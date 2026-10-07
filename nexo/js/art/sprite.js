@@ -950,8 +950,11 @@ function paintSprite(look, dir, pose) {
 const cache = new Map();
 const MAX_CACHE = 800;
 
+const spriteKey = (look, dir, pose) =>
+  `${look.skin}|${look.hair}|${look.hairStyle}|${look.shirt}|${look.top}|${look.pants}|${look.bottom}|${look.shoes}|${look.accessory}|${look.eyes}|${dir}|${pose.legs}|${pose.crouch}|${pose.bob}|${pose.arms}|${pose.blink}`;
+
 function spriteFor(look, dir, pose) {
-  const key = `${look.skin}|${look.hair}|${look.hairStyle}|${look.shirt}|${look.top}|${look.pants}|${look.bottom}|${look.shoes}|${look.accessory}|${look.eyes}|${dir}|${pose.legs}|${pose.crouch}|${pose.bob}|${pose.arms}|${pose.blink}`;
+  const key = spriteKey(look, dir, pose);
   let canvas = cache.get(key);
   if (!canvas) {
     if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value);
@@ -1002,3 +1005,18 @@ export function drawCharacter(ctx, footX, footY, look, options = {}) {
 
 /** Altura do sprite acima dos pés (para posicionar nomes e balões). */
 export const SPRITE_HEIGHT = FOOT_ROW;
+
+/**
+ * Quadro pronto para o motor (Phaser): o canvas em cache, uma chave estável para a textura
+ * e a âncora nos pés. Aceita as mesmas opções de drawCharacter ({ dir, pose } ou as antigas).
+ */
+export function characterSprite(look, options = {}) {
+  const { dir = 'down' } = options;
+  const pose = options.pose ? { ...DEFAULT_POSE, ...options.pose } : legacyPose(options);
+  return {
+    key: `chr|${spriteKey(look, dir, pose)}`,
+    canvas: spriteFor(look, dir, pose),
+    originX: 0.5,
+    originY: FOOT_ROW / GRID_H,
+  };
+}

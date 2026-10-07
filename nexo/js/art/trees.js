@@ -234,6 +234,20 @@ export function treeArt(variantIndex) {
 export const TREE_VARIANTS = VARIANTS.length;
 
 /**
+ * Posição das peças de uma árvore em relação à base do tronco (para montar a árvore no
+ * Phaser): tronco e as 3 fatias da copa, de cima para baixo.
+ */
+export function treeParts(variantIndex) {
+  const art = treeArt(variantIndex);
+  const canopyTop = -TRUNK_H - CANOPY_H + (art.kind === 'pine' ? 8 : 12);
+  return {
+    art,
+    trunk: { x: -TRUNK_W / 2, y: -TRUNK_H },
+    slices: art.slices.map((_, i) => ({ x: -CANOPY_W / 2, y: canopyTop + i * 17 })),
+  };
+}
+
+/**
  * Desenha uma árvore com a base do tronco em (x, baseY).
  * sway: quanto o vento entorta (pixels no topo da copa).
  */

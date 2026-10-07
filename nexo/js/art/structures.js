@@ -23,6 +23,9 @@ export function paintBuilding(ctx, building) {
       paintHouse(ctx, building, { wall: '#ece0c4', roof: '#2a9d8f' });
       paintAntenna(ctx, building);
       break;
+    case 'lab':
+      paintHouse(ctx, building, { wall: '#e2d4ee', roof: '#6b4a9a', chimney: true });
+      break;
     case 'farmhouse':
       paintHouse(ctx, building, { wall: '#b8432f', roof: '#5a4a5e', barn: true });
       break;

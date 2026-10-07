@@ -477,25 +477,9 @@ function buildFire(frame) {
   return { pix, ax: 13, ay: 11 };
 }
 
-export function drawIronCauldron(ctx, x, y, liquid, t, bubbling = 0.7) {
-  pixelShadow(ctx, x, y, 17, 2);
-  // Brilho do fogo no chão
-  ctx.fillStyle = 'rgba(255, 150, 60, .18)';
-  ctx.fillRect(Math.round(x - 15), Math.round(y - 3), 30, 4);
-  const frame = Math.floor(t * 10) % 4;
-  blit(ctx, sprite(`fire:${frame}`, () => buildFire(frame)), x, y - 2);
-  blit(ctx, sprite(`cauldron:${liquid}`, () => buildCauldron(liquid)), x, y);
-  // Bolhas e vapor (pixels subindo)
-  for (let i = 0; i < 4; i++) {
-    const phase = (t * bubbling + i / 4) % 1;
-    const bx = Math.round(x - 7 + i * 5 + Math.sin(t * 2 + i) * 1.5);
-    const by = Math.round(y - 23 - phase * 12);
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.75 * (1 - phase)})`;
-    const size = phase < 0.4 ? 1 : 2;
-    ctx.fillRect(bx, by, size, size);
-    if (size === 2) ctx.fillRect(bx - 1, by + 1, 1, 1);
-  }
-}
+/** Caldeirão e quadros do fogo como sprites (para o laboratório de poções, no Phaser). */
+export const cauldronSprite = (liquid) => sprite(`cauldron:${liquid}`, () => buildCauldron(liquid));
+export const fireSprite = (frame) => sprite(`fire:${frame}`, () => buildFire(frame));
 
 /* ---------- Pacote de cristais (trouxinha de pano) ---------- */
 

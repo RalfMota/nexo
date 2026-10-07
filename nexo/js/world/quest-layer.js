@@ -6,6 +6,10 @@
  *   - o que o jogador carrega (desenhado acima da cabeça, com a pose de carregar);
  *   - as ações do jogador (levantar, cavar, colher, manusear), tocadas pelo animador;
  *   - partículas (brilhos, estrelas) e o balão de fala de um personagem.
+ *
+ * Nenhum objeto aparece "seco": ao entrar no mapa (ou quando a função visible() dele passa
+ * a valer true, numa nova etapa), ele brota do chão com um quique e o motor solta
+ * partículas no ponto (ver setSpawnHook).
  */
 
 import { prefersCalm } from '../core/state.js';
@@ -16,6 +20,15 @@ let carried = null;
 let actionPlayer = null; // função do mundo que toca um clipe no animador do jogador
 let bubble = null; // { x, y, text, until }
 let clock = 0;
+let spawnHook = null; // (x, y) => void: partículas do motor quando um objeto brota
+let spawnIndex = 0;
+
+const APPEAR = 0.6; // segundos para um objeto brotar
+
+/** O motor informa como soltar as partículas de surgimento. */
+export function setSpawnHook(hook) {
+  spawnHook = hook;
+}
 
 /* ---------- Objetos ---------- */
 
@@ -23,10 +36,15 @@ let clock = 0;
  * Coloca um objeto da missão no mapa.
  * @param {{ id: string, x: number, y: number, reach?: number, label: string,
  *           draw: (ctx: CanvasRenderingContext2D, t: number) => void,
- *           onInteract: () => void, enabled?: () => boolean }} object
+ *           onInteract: () => void, enabled?: () => boolean, visible?: () => boolean }} object
  *   (x, y) é o ponto de interação (os "pés" do objeto, em pixels do mundo).
+ *   visible: quando o objeto só existe em algumas etapas; ao voltar a aparecer, ele brota de novo.
  */
 export function addQuestObject(object) {
+  // Os objetos de uma missão brotam um depois do outro, em cascata
+  object._born = clock + (spawnIndex++ % 12) * 0.05;
+  object._spawned = false;
+  object._shown = object.visible ? object.visible() : true;
   objects.set(object.id, object);
 }
 
@@ -36,6 +54,7 @@ export function removeQuestObject(id) {
 
 export function clearQuestLayer() {
   objects.clear();
+  spawnIndex = 0;
   particles.length = 0;
   carried = null;
   bubble = null;
@@ -145,8 +164,43 @@ export function updateQuestLayer(dt) {
 
 /* ---------- Desenho ---------- */
 
+const easeOutBack = (x) => 1 + 2.4 * (x - 1) ** 3 + 1.4 * (x - 1) ** 2;
+
 export function drawQuestObjects(ctx, t) {
-  for (const object of objects.values()) object.draw(ctx, t);
+  const calm = prefersCalm();
+  for (const object of objects.values()) {
+    if (object.visible) {
+      const shown = object.visible();
+      if (shown && !object._shown) {
+        object._born = clock;
+        object._spawned = false;
+      }
+      object._shown = shown;
+      if (!shown) continue;
+    }
+    const age = clock - object._born;
+    const anchored = object.x || object.y; // objetos de área inteira (x = y = 0) só esmaecem
+    if (!object._spawned && age >= 0) {
+      object._spawned = true;
+      if (anchored && !calm) spawnHook?.(object.x, object.y);
+    }
+    if (calm || age >= APPEAR) {
+      object.draw(ctx, t);
+      continue;
+    }
+    if (age < 0) continue;
+    const k = age / APPEAR;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, k * 1.8);
+    if (anchored) {
+      const grow = easeOutBack(k);
+      ctx.translate(object.x, object.y);
+      ctx.scale(0.7 + 0.3 * grow, Math.max(0.05, grow));
+      ctx.translate(-object.x, -object.y);
+    }
+    object.draw(ctx, t);
+    ctx.restore();
+  }
 }
 
 /** Item carregado, acima da cabeça do jogador (só com os braços erguidos). */

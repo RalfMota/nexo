@@ -4,9 +4,11 @@ import prologue from './prologue.js';
 import seedsWorld from './seeds-world.js';
 import floodgatesWorld from './floodgates-world.js';
 import marketWorld from './market-world.js';
+import potionLab from './potion-lab.js';
 import workshop from './workshop-world.js';
 import routes from './routes-world.js';
 import tower from './tower-world.js';
+import towerFloors from './tower-floors.js';
 import core from './core-world.js';
 import geometry from './geometry-world.js';
 import quadratic from './quadratic-world.js';
@@ -21,7 +23,7 @@ import { topicsForMission, bandForMission } from '../data/curriculum.js';
  * Desafios extras (extra: true) não contam para abrir regiões; aparecem quando a região
  * indicada em unlockAfter estiver concluída.
  */
-export const MISSIONS = { ...prologue, ...seedsWorld, ...floodgatesWorld, ...marketWorld, ...workshop, ...routes, ...tower, ...core, ...geometry, ...quadratic };
+export const MISSIONS = { ...prologue, ...seedsWorld, ...floodgatesWorld, ...marketWorld, ...potionLab, ...workshop, ...routes, ...tower, ...towerFloors, ...core, ...geometry, ...quadratic };
 
 for (const [id, mission] of Object.entries(MISSIONS)) {
   mission.topics = topicsForMission(id).map((topic) => topic.id);

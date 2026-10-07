@@ -58,6 +58,7 @@ export function addLever({ id, x, y, label, color = '#c2453b', onPull, enabled, 
     y,
     reach: 30,
     label,
+    visible: visible ? shown : undefined,
     enabled: () => shown() && (!enabled || enabled()),
     draw: (ctx, t) => {
       clock = t;
@@ -94,6 +95,7 @@ export function addDial({ id, x, y, label, min = 0, max = 60, value = 0, visible
     y: y + 2,
     reach: 20,
     label: `${label}: diminuir`,
+    visible: visible ? shown : undefined,
     enabled: shown,
     draw: (ctx, t) => {
       clock = t;

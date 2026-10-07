@@ -1,4 +1,9 @@
-/* NEXO — Desenho do mundo: camada fixa (pintada uma vez) + partes animadas a cada quadro */
+/* NEXO — Desenho do mundo: camada fixa (pintada uma vez) e camadas animadas
+ *
+ * Com o Phaser, personagens e árvores são objetos da cena (ordenados pela altura dos pés).
+ * Este módulo pinta o resto: a camada fixa do mapa (vira uma textura), a camada de chão
+ * (abaixo dos personagens) e a camada de cima (acima deles), além da miniatura do Mapa.
+ */
 
 import { TILE, MAP_W, MAP_H, ground, BUILDINGS, PROPS, CORE, BARRIERS, DECOR } from './map.js';
 import { paintDecor } from '../art/decor.js';
@@ -8,18 +13,17 @@ import {
   drawLampLight, drawCrystalProp, drawGearProp, drawFountainWater, drawBarrier,
   drawCoreCrystal, drawTowerCrystal, drawStationSignal, drawSmoke,
 } from '../art/structures.js';
-import { drawCharacter } from '../art/characters.js';
 import { outlinedText } from '../art/shapes.js';
 import { drawQuestObjects, drawCarried, drawEffects } from './quest-layer.js';
 import { drawGrass, drawWater, drawLeaves, drawLight, updateScenery, wind } from './scenery.js';
-import { drawTree, TREE_VARIANTS } from '../art/trees.js';
+import { TREE_VARIANTS } from '../art/trees.js';
 import { weatherNow, drawSplashes, drawWeatherScreen } from './weather.js';
 import { hash } from '../art/shapes.js';
 import { prefersCalm } from '../core/state.js';
 
 /* Árvores: uma por bloco de mata, com pequenas variações de posição e de espécie.
  * São desenhadas a cada quadro, junto com os personagens, para o vento e a profundidade. */
-const TREES = [];
+export const TREES = [];
 ground.forEach((row, ty) => row.forEach((char, tx) => {
   if (char !== 'T') return;
   const r = hash(tx, ty, 500);
@@ -61,23 +65,25 @@ export function getBaseLayer() {
 const isVisible = (x, y, w, h, view) =>
   x + w > view.x - 64 && x < view.x + view.w + 64 && y + h > view.y - 64 && y < view.y + view.h + 64;
 
+/** Balanço de uma árvore com o vento (pixels no topo da copa). */
+export function treeSway(tree, t, strength = 1) {
+  if (prefersCalm()) return 0;
+  return (wind(tree.x, tree.y, t + tree.phase) * 1.3 + Math.sin(t * 2.3 + tree.phase * 4) * 0.5) * strength;
+}
+
 /**
- * Desenha um quadro.
- * @param {object} frame dados do quadro (montados em world.js)
+ * Camada de chão (abaixo de personagens e árvores, que são objetos do Phaser):
+ * água e grama animadas, fumaça, luzes dos postes, cristais, engrenagens, rupturas,
+ * o cristal do Núcleo e os objetos das missões no mapa.
+ * @param {object} frame { view, t, world, focus, compass, progress, player }
  */
-export function renderWorld(ctx, frame) {
-  const { view, scale, t, world, actors, focus, compass, progress } = frame;
-
-  ctx.setTransform(scale, 0, 0, scale, -Math.round(view.x * scale), -Math.round(view.y * scale));
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(getBaseLayer(), 0, 0);
-
-  const player = actors.find((actor) => actor.isPlayer);
+export function drawGroundLayer(ctx, frame) {
+  const { view, t, world, compass, progress, player } = frame;
   drawWater(ctx, t, view);
   drawGrass(ctx, t, view, player);
 
   for (const b of BUILDINGS) {
-    if (b.kind === 'house') drawSmoke(ctx, b, t + b.x);
+    if (b.kind === 'house' || b.kind === 'lab') drawSmoke(ctx, b, t + b.x);
     if (b.kind === 'tower') drawTowerCrystal(ctx, b, progress.isDone('r5') ? 1 : 0, t);
     if (b.kind === 'station') drawStationSignal(ctx, b, progress.isDone('r4'), t);
   }
@@ -95,49 +101,42 @@ export function renderWorld(ctx, frame) {
   }
 
   drawCoreCrystal(ctx, CORE, progress.energy, t);
-
   drawQuestObjects(ctx, t);
-
   if (compass) drawCompassRings(ctx, world.interactables, t);
+}
 
-  // Personagens e árvores ordenados pela base (quem está mais ao sul fica na frente)
-  const calm = prefersCalm();
-  const strength = frame.windStrength ?? 1;
-  const drawables = actors.map((actor) => ({ y: actor.y, actor }));
-  for (const tree of TREES) {
-    if (tree.x < view.x - 40 || tree.x > view.x + view.w + 40 || tree.y < view.y - 4 || tree.y > view.y + view.h + 80) continue;
-    drawables.push({ y: tree.y, tree });
-  }
-  drawables.sort((a, b) => a.y - b.y).forEach(({ actor, tree }) => {
-    if (tree) {
-      const sway = calm ? 0 : (wind(tree.x, tree.y, t + tree.phase) * 1.3 + Math.sin(t * 2.3 + tree.phase * 4) * 0.5) * strength;
-      drawTree(ctx, tree.x, tree.y, tree.variant, sway);
-      return;
-    }
-    drawCharacter(ctx, actor.x, actor.y, actor.look, actor.pose);
-    if (actor.label) {
-      outlinedText(ctx, actor.label, actor.x, actor.y + 10, { font: '700 10px "Fredoka", sans-serif' });
-    }
+/**
+ * Camada de cima: nomes e alertas dos personagens, o que o jogador carrega, partículas,
+ * folhas, respingos, o "E" de interação, ambiente e, por fim, os efeitos de tela.
+ * @param {object} frame { view, t, world, actors, focus, progress, zoom }
+ * @param {{ width: number, height: number }} screen tamanho do canvas da camada
+ */
+export function drawOverlayLayer(ctx, frame, screen) {
+  const { view, t, world, actors, focus, progress } = frame;
+  for (const actor of actors) {
+    if (actor.label) outlinedText(ctx, actor.label, actor.x, actor.y + 10, { font: '700 10px "Fredoka", sans-serif' });
     if (actor.alert) drawAlert(ctx, actor.x, actor.y - 64 + Math.sin(t * 4) * 3);
     if (actor.isPlayer) drawCarried(ctx, actor.x, actor.y, t, actor.frame);
-  });
+  }
 
   drawEffects(ctx);
   drawLeaves(ctx);
   drawSplashes(ctx);
-
   if (focus) drawPrompt(ctx, focus.x, focus.promptY ?? focus.y - 72, t);
-
   drawAmbient(ctx, world.ambient, t, view);
 
   // Efeitos de tela (sem câmera)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const { width, height } = ctx.canvas;
+  drawScreenEffects(ctx, screen.width, screen.height, t, progress.gloom);
+}
+
+/** Luz do sol, clima, penumbra das regiões desligadas e vinheta. */
+export function drawScreenEffects(ctx, width, height, t, gloom = 0) {
   const weather = weatherNow();
   drawLight(ctx, width, height, t, weather.sun);
   drawWeatherScreen(ctx, width, height, t);
-  if (progress.gloom > 0) {
-    ctx.fillStyle = `rgba(60, 36, 110, ${progress.gloom})`;
+  if (gloom > 0) {
+    ctx.fillStyle = `rgba(60, 36, 110, ${gloom})`;
     ctx.fillRect(0, 0, width, height);
   }
   const vignette = ctx.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.35, width / 2, height / 2, Math.max(width, height) * 0.75);
@@ -147,7 +146,7 @@ export function renderWorld(ctx, frame) {
   ctx.fillRect(0, 0, width, height);
 }
 
-function drawAlert(ctx, x, y) {
+export function drawAlert(ctx, x, y) {
   ctx.fillStyle = '#4f3019';
   ctx.beginPath();
   ctx.arc(x, y, 9, 0, Math.PI * 2);
@@ -161,7 +160,7 @@ function drawAlert(ctx, x, y) {
   ctx.fillRect(x - 1, y + 3, 3, 2);
 }
 
-function drawPrompt(ctx, x, y, t) {
+export function drawPrompt(ctx, x, y, t) {
   const bob = Math.sin(t * 5) * 2;
   ctx.fillStyle = '#4f3019';
   ctx.fillRect(x - 12, y - 12 + bob, 24, 22);

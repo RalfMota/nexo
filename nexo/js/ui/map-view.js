@@ -7,7 +7,7 @@ import { MISSIONS } from '../missions/index.js';
 import { isRegionOpen, isRegionDone, isMissionDone, isRegionOpenById } from '../game/progress.js';
 import { startMission } from '../game/session.js';
 import { renderMinimap } from '../world/renderer.js';
-import { getPlayerPosition } from '../world/world.js';
+import { getMapPosition } from '../world/world.js';
 import { openModal } from './modal.js';
 
 export function openMapView() {
@@ -41,7 +41,7 @@ export function openMapView() {
       </div>`,
   });
 
-  const position = getPlayerPosition();
+  const position = getMapPosition();
   renderMinimap(qs('canvas', body), { playerX: position.x, playerY: position.y, isOpen: isRegionOpenById });
   body.querySelectorAll('[data-mission]').forEach((button) => {
     button.addEventListener('click', () => startMission(button.dataset.mission));
