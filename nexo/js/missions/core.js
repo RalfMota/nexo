@@ -8,7 +8,7 @@ import { tween, paintPanel } from './widgets.js';
 import { roundRect, circle, outlinedText, drawCrystal } from '../art/shapes.js';
 import { prefersCalm } from '../core/state.js';
 
-const font = (size) => `700 ${size}px "Pixelify Sans", sans-serif`;
+const font = (size) => `700 ${size}px "Fredoka", sans-serif`;
 const energyOf = (crystals) => 4 * crystals + 6;
 const crystalsLabel = (count) => `${count} ${count === 1 ? 'cristal' : 'cristais'}`;
 const TESTS = 2;

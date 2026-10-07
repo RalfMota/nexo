@@ -91,7 +91,7 @@ export function drawCoin(ctx, x, y, radius = 6) {
 }
 
 /** Texto com contorno, para legendas sobre cenas. */
-export function outlinedText(ctx, text, x, y, { font = '700 14px "Pixelify Sans", sans-serif', fill = '#fff', stroke = 'rgba(20,16,40,.85)', align = 'center' } = {}) {
+export function outlinedText(ctx, text, x, y, { font = '700 14px "Fredoka", sans-serif', fill = '#fff', stroke = 'rgba(20,16,40,.85)', align = 'center' } = {}) {
   ctx.font = font;
   ctx.textAlign = align;
   ctx.textBaseline = 'middle';

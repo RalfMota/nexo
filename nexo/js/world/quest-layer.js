@@ -38,7 +38,6 @@ export function clearQuestLayer() {
   objects.clear();
   particles.length = 0;
   carried = null;
-  action = null;
   bubble = null;
 }
 
@@ -154,7 +153,7 @@ export function drawQuestObjects(ctx, t) {
 export function drawCarried(ctx, x, footY, t, { arms = 'raised', lift = 0, scaleY = 1 } = {}) {
   if (!carried || arms !== 'raised') return;
   ctx.save();
-  ctx.translate(Math.round(x), Math.round(footY - lift - 50 * scaleY + Math.sin(t * 6) * 0.6));
+  ctx.translate(Math.round(x), Math.round(footY - lift - 58 * scaleY + Math.sin(t * 6) * 0.6));
   carried.draw(ctx, t);
   ctx.restore();
 }

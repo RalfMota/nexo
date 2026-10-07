@@ -49,7 +49,7 @@
   --magic: var(--violet);
   --gold-dark: var(--gold-deep);
 
-  --font-display: "Pixelify Sans", "Trebuchet MS", system-ui, sans-serif;
+  --font-display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
   --font-body: "Lexend", "Segoe UI", system-ui, sans-serif;
 
   /* Contorno de pixel: quatro sombras sem desfoque deixam os cantos "mordidos" */

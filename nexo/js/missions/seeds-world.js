@@ -9,7 +9,7 @@
  */
 
 import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
-import { circle } from '../art/shapes.js';
+import { drawSeedSack, drawSeedBowl, drawSeederMachine, drawSoilBed, drawPlantedSeed } from '../art/items.js';
 
 const TILE = 32;
 const MAX_IN_HAND = 10;
@@ -22,7 +22,7 @@ const BEDS = [
 ].map(([x, y]) => ({ x, y, w: 112, h: 28 }));
 
 const SACK = { x: 11 * TILE, y: 21 * TILE + 20 };
-const SEEDER = { x: 8 * TILE + 16, y: 24 * TILE + 26 };
+const SEEDER = { x: 10 * TILE + 4, y: 24 * TILE + 26 }; // ao lado do poste do Vale (8, 23)
 const BARN_DOOR = { x: 5 * TILE + 16, y: 17 * TILE + 12 };
 
 const STAGES = [
@@ -302,43 +302,18 @@ function mountSeedsWorld(api) {
 /* ---------- Desenho ---------- */
 
 function drawSack(ctx, x, y, count, scale) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-  ctx.fillStyle = 'rgba(30, 20, 40, .25)';
-  ctx.fillRect(-9, -2, 18, 3);
-  ctx.fillStyle = '#7d5530';
-  ctx.fillRect(-9, -18, 18, 17);
-  ctx.fillStyle = '#c9a26b';
-  ctx.fillRect(-8, -17, 16, 15);
-  ctx.fillStyle = '#b48a55';
-  ctx.fillRect(-8, -8, 16, 6);
-  ctx.fillStyle = '#e0bd85';
-  ctx.fillRect(-6, -16, 4, 6);
-  ctx.fillStyle = '#7d5530';
-  ctx.fillRect(-5, -22, 10, 4);
-  ctx.fillStyle = '#ffe9a0';
-  ctx.fillRect(-3, -23, 2, 2);
-  ctx.fillRect(1, -24, 2, 2);
-  ctx.restore();
-  drawTag(ctx, x, y - 30 * scale, String(count));
+  drawSeedSack(ctx, x, y, scale);
+  drawTag(ctx, x, y - 34 * scale, String(count));
 }
 
 function drawHandful(ctx, count) {
-  ctx.fillStyle = '#4f3019';
-  ctx.fillRect(-7, -4, 14, 7);
-  ctx.fillStyle = '#c9a26b';
-  ctx.fillRect(-6, -3, 12, 5);
-  for (let i = 0; i < Math.min(count, 6); i++) {
-    ctx.fillStyle = '#ffe9a0';
-    ctx.fillRect(-5 + (i % 3) * 4, -5 - Math.floor(i / 3) * 2, 2, 2);
-  }
-  drawTag(ctx, 0, -12, String(count));
+  drawSeedBowl(ctx, 0, 0, count);
+  drawTag(ctx, 0, -14, String(count));
 }
 
 /** Etiqueta com número, sempre legível sobre o mapa. */
 function drawTag(ctx, x, y, text) {
-  ctx.font = '700 8px "Pixelify Sans", sans-serif';
+  ctx.font = '700 8px "Fredoka", sans-serif';
   const width = Math.ceil(ctx.measureText(text).width) + 8;
   const left = Math.round(x - width / 2);
   const top = Math.round(y - 6);
@@ -355,17 +330,7 @@ function drawTag(ctx, x, y, text) {
 function drawBed(ctx, bed, count, { active, target, sprout, t }) {
   const left = bed.x - bed.w / 2;
   const top = bed.y - bed.h / 2;
-  // Monte de terra com sulcos
-  ctx.fillStyle = 'rgba(40, 20, 10, .35)';
-  ctx.fillRect(left + 2, top + bed.h, bed.w, 3);
-  ctx.fillStyle = '#6e4226';
-  ctx.fillRect(left, top, bed.w, bed.h);
-  ctx.fillStyle = '#8a5634';
-  ctx.fillRect(left + 1, top + 1, bed.w - 2, bed.h - 3);
-  ctx.fillStyle = '#a06a40';
-  ctx.fillRect(left + 2, top + 1, bed.w - 4, 2);
-  ctx.fillStyle = '#5e3820';
-  for (let row = 8; row < bed.h - 3; row += 8) ctx.fillRect(left + 4, top + row, bed.w - 8, 1);
+  drawSoilBed(ctx, left, top, bed.w, bed.h);
   // Canteiro ativo: brilho suave na borda
   if (active && sprout === 0) {
     ctx.strokeStyle = `rgba(255, 224, 138, ${0.45 + Math.sin(t * 3) * 0.25})`;
@@ -376,45 +341,22 @@ function drawBed(ctx, bed, count, { active, target, sprout, t }) {
   for (let i = 0; i < Math.min(count, 14); i++) {
     const sx = left + 14 + (i % 7) * 14;
     const sy = top + 8 + Math.floor(i / 7) * 10;
-    if (sprout > 0) {
-      ctx.fillStyle = '#3f8a35';
-      ctx.fillRect(sx, sy - 7 * sprout, 1, 7 * sprout);
-      ctx.fillStyle = '#7fd36a';
-      ctx.fillRect(sx - 3 * sprout, sy - 7 * sprout, 3 * sprout, 2);
-      ctx.fillRect(sx + 1, sy - 5 * sprout, 3 * sprout, 2);
-    }
-    circle(ctx, sx + 0.5, sy, 2.5, `rgba(255, 236, 140, ${0.25 + Math.sin(t * 3 + i) * 0.12})`);
-    ctx.fillStyle = '#ffe9a0';
-    ctx.fillRect(sx - 1, sy - 1, 2, 2);
+    drawPlantedSeed(ctx, sx, sy, sprout, t, i);
   }
   // Estaca com a quantidade pedida (etapa de contagem) e contador do canteiro
   if (active && target) {
-    ctx.fillStyle = '#6b4226';
-    ctx.fillRect(left - 6, top - 10, 2, 22);
+    ctx.fillStyle = '#4a2a16';
+    ctx.fillRect(left - 6.5, top - 10, 3, 22);
+    ctx.fillStyle = '#8a5a33';
+    ctx.fillRect(left - 6, top - 10, 1, 22);
     drawTag(ctx, left - 5, top - 14, String(target));
   }
   if (active || count > 0) drawTag(ctx, left + bed.w - 8, top - 4, String(count));
 }
 
 function drawSeeder(ctx, x, y, t) {
-  ctx.fillStyle = 'rgba(30, 20, 40, .3)';
-  ctx.fillRect(x - 14, y - 1, 28, 3);
-  ctx.fillStyle = '#6b4226';
-  ctx.fillRect(x - 13, y - 20, 26, 19);
-  ctx.fillStyle = '#a0703f';
-  ctx.fillRect(x - 12, y - 19, 24, 9);
-  ctx.fillStyle = '#7d5530';
-  ctx.fillRect(x - 12, y - 10, 24, 8);
-  for (let i = 0; i < 6; i++) {
-    ctx.fillStyle = '#5b5f73';
-    ctx.fillRect(x - 11 + i * 4, y - 2, 2, 3);
-  }
-  // Manivela girando
-  const angle = t * 2;
-  ctx.fillStyle = '#c9862a';
-  ctx.fillRect(x + 13, y - 14, 3, 3);
-  ctx.fillRect(Math.round(x + 14 + Math.cos(angle) * 5), Math.round(y - 13 + Math.sin(angle) * 5), 3, 3);
-  drawTag(ctx, x, y - 30, 'semeadeira');
+  drawSeederMachine(ctx, x, y, t);
+  drawTag(ctx, x, y - 36, 'semeadeira');
 }
 
 function drawArrow(ctx, x, y, t) {

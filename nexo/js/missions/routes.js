@@ -8,7 +8,7 @@ import { paintSky } from './widgets.js';
 import { roundRect, outlinedText, drawCoin } from '../art/shapes.js';
 import { prefersCalm } from '../core/state.js';
 
-const font = (size) => `700 ${size}px "Pixelify Sans", sans-serif`;
+const font = (size) => `700 ${size}px "Fredoka", sans-serif`;
 
 const costA = (distance) => 5 + 3 * distance;
 const costB = (distance) => 15 + 2 * distance;

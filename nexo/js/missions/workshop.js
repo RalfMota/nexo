@@ -8,7 +8,7 @@ import { tween, paintPanel } from './widgets.js';
 import { roundRect, circle, outlinedText, drawCrystal, drawGear } from '../art/shapes.js';
 import { prefersCalm } from '../core/state.js';
 
-const font = (size) => `700 ${size}px "Pixelify Sans", sans-serif`;
+const font = (size) => `700 ${size}px "Fredoka", sans-serif`;
 
 /* ---------- r3a: Máquina de Produção (y = 3x) ---------- */
 

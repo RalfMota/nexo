@@ -3,10 +3,11 @@
  * draw*:  partes animadas, desenhadas a cada quadro.
  */
 
-import { shade, roundRect, circle, drawCrystal, drawGear } from './shapes.js';
+import { hash, shade, roundRect, circle, drawCrystal, drawGear } from './shapes.js';
+import { paintPixelProp, drawLampHead } from './props.js';
 
 const T = 32;
-const SIGN_FONT = '700 9px "Pixelify Sans", monospace';
+const SIGN_FONT = '700 9px "Fredoka", monospace';
 
 /* ---------- Construções ---------- */
 
@@ -23,100 +24,375 @@ export function paintBuilding(ctx, building) {
       paintAntenna(ctx, building);
       break;
     case 'farmhouse':
-      paintHouse(ctx, building, { wall: '#ead6ac', roof: '#b8432f', chimney: true });
+      paintHouse(ctx, building, { wall: '#b8432f', roof: '#5a4a5e', barn: true });
       break;
     default:
       paintHouse(ctx, building, { wall: building.wall, roof: building.roof, chimney: true });
   }
 }
 
-function paintHouse(ctx, b, { wall, roof, brick = false, bigDoor = false, chimney = false }) {
+const WOOD = { o: '#3a2212', d: '#5a3620', m: '#7a4a28', l: '#9a6638', h: '#b98a52' };
+const STONE = ['#8f8a80', '#9d978b', '#857f75', '#a6a094'];
+const FLOWERS = ['#f25f7a', '#ffd34d', '#ffffff', '#b48cff', '#ff9f5a'];
+
+function paintHouse(ctx, b, { wall, roof, brick = false, bigDoor = false, chimney = false, barn = false }) {
   const X = b.x * T;
   const Y = b.y * T;
   const W = b.w * T;
   const H = b.h * T;
   const roofH = Math.round(H * 0.52);
+  const wallTop = Y + roofH - 6;
+  const footTop = Y + H - 8;
+  const seed = b.x * 7 + b.y;
 
-  ctx.fillStyle = 'rgba(0,0,0,.2)';
-  ctx.fillRect(X + 6, Y + H - 6, W, 10);
+  // Sombra projetada (sol vindo da esquerda, de cima)
+  ctx.fillStyle = 'rgba(20, 35, 10, .24)';
+  ctx.fillRect(X + 6, Y + H - 3, W + 2, 6);
+  ctx.fillRect(X + W - 2, Y + roofH + 2, 7, H - roofH - 2);
+
+  // Chaminé atrás do telhado
+  if (chimney) paintChimney(ctx, X + W - 30, Y - 10);
 
   // Parede
-  ctx.fillStyle = wall;
-  ctx.fillRect(X + 3, Y + roofH - 6, W - 6, H - roofH + 6);
-  ctx.fillStyle = shade(wall, -0.1);
-  if (brick) {
-    for (let row = Y + roofH; row < Y + H - 6; row += 6) {
-      ctx.fillRect(X + 3, row, W - 6, 1);
-      const offset = ((row - Y) / 6) % 2 ? 6 : 0;
-      for (let col = X + 3 + offset; col < X + W - 3; col += 12) ctx.fillRect(col, row, 1, 6);
-    }
-  } else {
-    for (let row = Y + roofH; row < Y + H - 6; row += 6) ctx.fillRect(X + 3, row, W - 6, 1);
-  }
-  ctx.fillStyle = '#8f8a80';
-  ctx.fillRect(X + 3, Y + H - 6, W - 6, 6);
+  const wl = X + 5;
+  const ww = W - 10;
+  if (brick) paintBrickWall(ctx, wl, wallTop, ww, footTop - wallTop, wall, seed);
+  else paintPlankWall(ctx, wl, wallTop, ww, footTop - wallTop, wall, seed, barn);
 
-  // Chaminé
-  if (chimney) {
-    ctx.fillStyle = '#8b4a3a';
-    ctx.fillRect(X + W - 28, Y - 8, 10, 20);
-    ctx.fillStyle = '#6e3a2d';
-    ctx.fillRect(X + W - 30, Y - 10, 14, 4);
+  // Colunas de canto
+  for (const cx of [wl - 1, wl + ww - 4]) {
+    ctx.fillStyle = barn ? '#f4ecdc' : WOOD.d;
+    ctx.fillRect(cx, wallTop, 5, footTop - wallTop);
+    ctx.fillStyle = barn ? '#ffffff' : WOOD.l;
+    ctx.fillRect(cx + 1, wallTop, 1, footTop - wallTop);
+    ctx.fillStyle = barn ? '#c9bfae' : WOOD.o;
+    ctx.fillRect(cx + 4, wallTop, 1, footTop - wallTop);
   }
 
-  // Telhado com telhas
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(X - 5, Y + roofH);
-  ctx.lineTo(X + W + 5, Y + roofH);
-  ctx.lineTo(X + W - 8, Y + 2);
-  ctx.lineTo(X + 8, Y + 2);
-  ctx.closePath();
-  ctx.fillStyle = roof;
-  ctx.fill();
-  ctx.clip();
-  ctx.fillStyle = shade(roof, -0.18);
-  for (let row = Y + 8; row < Y + roofH; row += 7) ctx.fillRect(X - 5, row, W + 10, 2);
-  ctx.fillStyle = shade(roof, 0.2);
-  ctx.fillRect(X, Y + 2, W, 3);
-  ctx.restore();
-  ctx.fillStyle = shade(roof, -0.35);
-  ctx.fillRect(X - 5, Y + roofH, W + 10, 3);
+  // Fundação de pedras
+  paintFoundation(ctx, X + 3, footTop, W - 6, 8, seed);
+
+  // Sombra do beiral sobre a parede
+  const eave = ctx.createLinearGradient(0, wallTop, 0, wallTop + 12);
+  eave.addColorStop(0, 'rgba(25, 15, 30, .45)');
+  eave.addColorStop(1, 'rgba(25, 15, 30, 0)');
+  ctx.fillStyle = eave;
+  ctx.fillRect(wl, wallTop, ww, 12);
+
+  // Telhado
+  paintRoof(ctx, X, Y, W, roofH, roof, seed, barn);
 
   // Janelas
-  if (W >= 96) {
-    for (const wx of [X + 12, X + W - 34]) paintWindow(ctx, wx, Y + roofH + 8);
+  const winY = Y + roofH + 8;
+  if (W >= 96 && !barn) {
+    const shutters = W >= 128 ? roof : null;
+    const offset = shutters ? 14 : 11;
+    for (const wx of [X + offset, X + W - offset - 22]) paintWindow(ctx, wx, winY, shutters, seed + wx);
   }
 
   // Porta
-  const doorW = bigDoor ? 44 : 20;
-  const doorX = X + W / 2 - doorW / 2;
-  const doorY = Y + H - 28;
-  ctx.fillStyle = '#4a2a16';
-  ctx.fillRect(doorX - 2, doorY - 2, doorW + 4, 28);
-  ctx.fillStyle = bigDoor ? '#7a7f96' : '#6a3f22';
-  ctx.fillRect(doorX, doorY, doorW, 26);
-  if (bigDoor) {
-    ctx.fillStyle = '#5c6075';
-    for (let row = doorY + 4; row < doorY + 26; row += 5) ctx.fillRect(doorX, row, doorW, 1);
-  } else {
-    ctx.fillStyle = '#f2c14e';
-    ctx.fillRect(doorX + doorW - 6, doorY + 13, 3, 3);
-  }
+  if (barn) paintBarnDoor(ctx, X + W / 2 - 20, Y + H - 34, 40, 30);
+  else if (bigDoor) paintGarageDoor(ctx, X + W / 2 - 22, Y + H - 34, 44, 30);
+  else paintDoor(ctx, X + W / 2 - 10, Y + H - 33, 20, 29, roof);
 
   if (b.label) paintSignBoard(ctx, X + W / 2, Y + roofH - 2, b.label);
+  else paintDormer(ctx, X + W / 2, Y + Math.round(roofH * 0.42));
 }
 
-function paintWindow(ctx, x, y) {
-  ctx.fillStyle = '#4a2a16';
-  ctx.fillRect(x - 2, y - 2, 24, 20);
+function paintPlankWall(ctx, x, y, w, h, color, seed, barn) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+  if (barn) {
+    // Tábuas verticais
+    for (let col = 0; col < w; col += 6) {
+      ctx.fillStyle = hash(col, seed, 3) > 0.5 ? shade(color, 0.06) : shade(color, -0.05);
+      ctx.fillRect(x + col, y, 6, h);
+      ctx.fillStyle = shade(color, -0.32);
+      ctx.fillRect(x + col + 5, y, 1, h);
+      ctx.fillStyle = shade(color, 0.16);
+      ctx.fillRect(x + col, y, 1, h);
+    }
+    // Faixa branca do meio
+    ctx.fillStyle = '#f4ecdc';
+    ctx.fillRect(x, y + 6, w, 3);
+    ctx.fillStyle = '#c9bfae';
+    ctx.fillRect(x, y + 9, w, 1);
+    return;
+  }
+  // Tábuas horizontais (lambri) com emendas desencontradas
+  for (let row = 0; row < h; row += 7) {
+    const rowH = Math.min(7, h - row);
+    ctx.fillStyle = hash(row, seed, 1) > 0.5 ? shade(color, 0.04) : shade(color, -0.04);
+    ctx.fillRect(x, y + row, w, rowH);
+    ctx.fillStyle = shade(color, 0.2);
+    ctx.fillRect(x, y + row, w, 1);
+    ctx.fillStyle = shade(color, -0.28);
+    ctx.fillRect(x, y + row + rowH - 1, w, 1);
+    const seam = 18 + Math.floor(hash(row, seed, 2) * 30);
+    for (let col = seam; col < w; col += 42) {
+      ctx.fillStyle = shade(color, -0.22);
+      ctx.fillRect(x + col, y + row + 1, 1, rowH - 2);
+      // Prego
+      ctx.fillStyle = shade(color, -0.45);
+      ctx.fillRect(x + col + 2, y + row + 3, 1, 1);
+    }
+  }
+}
+
+function paintBrickWall(ctx, x, y, w, h, color, seed) {
+  ctx.fillStyle = shade(color, -0.35);
+  ctx.fillRect(x, y, w, h);
+  for (let row = 0, r = 0; row < h; row += 6, r++) {
+    const offset = r % 2 ? -6 : 0;
+    for (let col = offset; col < w; col += 12) {
+      const bx = Math.max(x, x + col);
+      const bw = Math.min(x + col + 11, x + w) - bx;
+      if (bw <= 0) continue;
+      const tone = hash(col, row, seed);
+      ctx.fillStyle = tone > 0.75 ? shade(color, 0.1) : tone < 0.2 ? shade(color, -0.12) : color;
+      ctx.fillRect(bx, y + row, bw, 5);
+      ctx.fillStyle = shade(color, 0.22);
+      ctx.fillRect(bx, y + row, bw, 1);
+    }
+  }
+}
+
+function paintFoundation(ctx, x, y, w, h, seed) {
+  ctx.fillStyle = '#5e5a52';
+  ctx.fillRect(x, y, w, h);
+  let col = 0;
+  let i = 0;
+  while (col < w) {
+    const sw = Math.min(8 + Math.floor(hash(i, seed, 4) * 8), w - col);
+    ctx.fillStyle = STONE[Math.floor(hash(i, seed, 5) * STONE.length)];
+    ctx.fillRect(x + col + 1, y + 1, sw - 1, h - 2);
+    ctx.fillStyle = 'rgba(255,255,255,.28)';
+    ctx.fillRect(x + col + 1, y + 1, sw - 2, 1);
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.fillRect(x + col + 1, y + h - 2, sw - 1, 1);
+    col += sw;
+    i++;
+  }
+}
+
+function paintRoof(ctx, X, Y, W, roofH, roof, seed, barn) {
+  ctx.save();
+  ctx.beginPath();
+  if (barn) {
+    // Telhado de celeiro (duas águas quebradas)
+    ctx.moveTo(X - 6, Y + roofH);
+    ctx.lineTo(X + W + 6, Y + roofH);
+    ctx.lineTo(X + W - 2, Y + roofH * 0.45);
+    ctx.lineTo(X + W - 18, Y + 2);
+    ctx.lineTo(X + 18, Y + 2);
+    ctx.lineTo(X + 2, Y + roofH * 0.45);
+  } else {
+    ctx.moveTo(X - 6, Y + roofH);
+    ctx.lineTo(X + W + 6, Y + roofH);
+    ctx.lineTo(X + W - 8, Y + 2);
+    ctx.lineTo(X + 8, Y + 2);
+  }
+  ctx.closePath();
+  ctx.fillStyle = shade(roof, -0.6);
+  ctx.fill();
+  ctx.clip();
+
+  // Telhas em fileiras desencontradas
+  for (let row = 0, r = 0; Y + 3 + row < Y + roofH; row += 6, r++) {
+    const offset = r % 2 ? 4 : 0;
+    for (let col = -8 + offset; col < W + 12; col += 8) {
+      const tone = hash(col, r, seed + 9);
+      ctx.fillStyle = tone > 0.82 ? shade(roof, 0.1) : tone < 0.15 ? shade(roof, -0.1) : roof;
+      ctx.fillRect(X - 6 + col, Y + 3 + row, 7, 6);
+      ctx.fillStyle = shade(roof, 0.22);
+      ctx.fillRect(X - 6 + col, Y + 3 + row, 6, 1);
+      ctx.fillStyle = shade(roof, -0.3);
+      ctx.fillRect(X - 6 + col, Y + 7 + row, 7, 2);
+    }
+  }
+  // Volume: lado esquerdo iluminado, direito na sombra
+  const light = ctx.createLinearGradient(X, 0, X + W, 0);
+  light.addColorStop(0, 'rgba(255, 245, 210, .14)');
+  light.addColorStop(0.5, 'rgba(255, 245, 210, 0)');
+  light.addColorStop(1, 'rgba(20, 10, 40, .2)');
+  ctx.fillStyle = light;
+  ctx.fillRect(X - 6, Y, W + 12, roofH);
+  ctx.restore();
+
+  // Cumeeira e beiral
+  const inset = barn ? 18 : 8;
+  ctx.fillStyle = shade(roof, -0.4);
+  ctx.fillRect(X + inset, Y + 1, W - inset * 2, 4);
+  ctx.fillStyle = shade(roof, 0.3);
+  ctx.fillRect(X + inset, Y + 1, W - inset * 2, 1);
+  ctx.fillStyle = WOOD.o;
+  ctx.fillRect(X - 7, Y + roofH - 1, W + 14, 4);
+  ctx.fillStyle = barn ? '#f4ecdc' : WOOD.m;
+  ctx.fillRect(X - 6, Y + roofH - 1, W + 12, 2);
+}
+
+function paintChimney(ctx, x, y) {
+  ctx.fillStyle = '#4a2420';
+  ctx.fillRect(x - 1, y + 2, 14, 24);
+  for (let row = 0, r = 0; row < 22; row += 4, r++) {
+    for (let col = r % 2 ? -3 : 0; col < 12; col += 6) {
+      const bx = Math.max(x, x + col);
+      ctx.fillStyle = hash(col, row, 11) > 0.6 ? '#a65a48' : '#8b4a3a';
+      ctx.fillRect(bx, y + 3 + row, Math.min(x + col + 5, x + 12) - bx, 3);
+    }
+  }
+  ctx.fillStyle = '#3d3a40';
+  ctx.fillRect(x - 3, y - 1, 18, 4);
+  ctx.fillStyle = '#6b6870';
+  ctx.fillRect(x - 3, y - 1, 18, 1);
+}
+
+function paintWindow(ctx, x, y, shutterColor, seed) {
+  // Venezianas
+  if (shutterColor) {
+    for (const sx of [x - 7, x + 23]) {
+      ctx.fillStyle = shade(shutterColor, -0.45);
+      ctx.fillRect(sx, y - 2, 6, 21);
+      ctx.fillStyle = shutterColor;
+      ctx.fillRect(sx + 1, y - 1, 4, 19);
+      ctx.fillStyle = shade(shutterColor, -0.25);
+      for (let row = y + 1; row < y + 17; row += 3) ctx.fillRect(sx + 1, row, 4, 1);
+    }
+  }
+  // Moldura
+  ctx.fillStyle = WOOD.o;
+  ctx.fillRect(x - 2, y - 3, 26, 22);
+  ctx.fillStyle = '#f4ecdc';
+  ctx.fillRect(x - 1, y - 2, 24, 20);
+  // Vidro com reflexo do céu
+  const glass = ctx.createLinearGradient(0, y, 0, y + 16);
+  glass.addColorStop(0, '#a8dcf2');
+  glass.addColorStop(0.55, '#5f8fc8');
+  glass.addColorStop(1, '#3d4f8a');
+  ctx.fillStyle = glass;
+  ctx.fillRect(x + 1, y, 20, 16);
+  // Cortinas
+  ctx.fillStyle = 'rgba(255, 240, 210, .75)';
+  ctx.fillRect(x + 1, y, 4, 9);
+  ctx.fillRect(x + 17, y, 4, 9);
+  // Brilho diagonal
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  for (let i = 0; i < 5; i++) ctx.fillRect(x + 12 + i, y + 1 + i, 2, 1);
+  ctx.fillRect(x + 3, y + 11, 1, 1);
+  // Caixilho
+  ctx.fillStyle = '#f4ecdc';
+  ctx.fillRect(x + 10, y, 2, 16);
+  ctx.fillRect(x + 1, y + 7, 20, 2);
+  // Peitoril e floreira
+  ctx.fillStyle = WOOD.o;
+  ctx.fillRect(x - 3, y + 17, 28, 7);
+  ctx.fillStyle = WOOD.m;
+  ctx.fillRect(x - 2, y + 18, 26, 5);
+  ctx.fillStyle = WOOD.l;
+  ctx.fillRect(x - 2, y + 18, 26, 1);
+  for (let i = 0; i < 6; i++) {
+    const fx = x - 1 + i * 4 + Math.floor(hash(i, seed, 6) * 2);
+    ctx.fillStyle = '#3f7f34';
+    ctx.fillRect(fx, y + 15, 3, 3);
+    ctx.fillStyle = '#5aa84a';
+    ctx.fillRect(fx, y + 15, 2, 1);
+    ctx.fillStyle = FLOWERS[Math.floor(hash(i, seed, 7) * FLOWERS.length)];
+    ctx.fillRect(fx + 1, y + 13 + (i % 2), 2, 2);
+  }
+}
+
+function paintDoor(ctx, x, y, w, h, accent) {
+  // Batente e degrau
+  ctx.fillStyle = WOOD.o;
+  ctx.fillRect(x - 3, y - 3, w + 6, h + 3);
+  ctx.fillStyle = '#9d978b';
+  ctx.fillRect(x - 5, y + h, w + 10, 4);
+  ctx.fillStyle = '#c4beb1';
+  ctx.fillRect(x - 5, y + h, w + 10, 1);
+  // Folha da porta em tábuas
+  ctx.fillStyle = WOOD.m;
+  ctx.fillRect(x, y, w, h);
+  for (let col = 0; col < w; col += 5) {
+    ctx.fillStyle = WOOD.l;
+    ctx.fillRect(x + col, y, 1, h);
+    ctx.fillStyle = WOOD.d;
+    ctx.fillRect(x + col + 4, y, 1, h);
+  }
+  ctx.fillStyle = WOOD.d;
+  ctx.fillRect(x, y + 6, w, 2);
+  ctx.fillRect(x, y + h - 8, w, 2);
+  // Janelinha e maçaneta
+  ctx.fillStyle = WOOD.o;
+  ctx.fillRect(x + w / 2 - 4, y + 10, 8, 6);
   ctx.fillStyle = '#ffd98a';
-  ctx.fillRect(x, y, 20, 16);
-  ctx.fillStyle = '#ffeebf';
-  ctx.fillRect(x + 2, y + 2, 6, 4);
-  ctx.fillStyle = '#4a2a16';
-  ctx.fillRect(x + 9, y, 2, 16);
-  ctx.fillRect(x, y + 7, 20, 2);
+  ctx.fillRect(x + w / 2 - 3, y + 11, 6, 4);
+  ctx.fillStyle = '#f2c14e';
+  ctx.fillRect(x + w - 5, y + 17, 2, 2);
+  // Tapete na cor do telhado
+  ctx.fillStyle = shade(accent, -0.2);
+  ctx.fillRect(x - 2, y + h + 4, w + 4, 3);
+}
+
+function paintBarnDoor(ctx, x, y, w, h) {
+  ctx.fillStyle = '#f4ecdc';
+  ctx.fillRect(x - 3, y - 3, w + 6, h + 3);
+  for (const half of [0, w / 2]) {
+    const dx = x + half + 1;
+    const dw = w / 2 - 2;
+    ctx.fillStyle = '#8a2f24';
+    ctx.fillRect(dx, y, dw, h);
+    ctx.fillStyle = '#6e241b';
+    for (let col = 0; col < dw; col += 5) ctx.fillRect(dx + col + 4, y, 1, h);
+    // X branco
+    ctx.strokeStyle = '#f4ecdc';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(dx + 1, y + 1);
+    ctx.lineTo(dx + dw - 1, y + h - 1);
+    ctx.moveTo(dx + dw - 1, y + 1);
+    ctx.lineTo(dx + 1, y + h - 1);
+    ctx.stroke();
+    ctx.strokeRect(dx + 1, y + 1, dw - 2, h - 2);
+  }
+  // Trilho
+  ctx.fillStyle = '#3d3a40';
+  ctx.fillRect(x - 6, y - 5, w + 12, 3);
+}
+
+function paintGarageDoor(ctx, x, y, w, h) {
+  ctx.fillStyle = '#2f2b38';
+  ctx.fillRect(x - 3, y - 3, w + 6, h + 3);
+  for (let row = 0; row < h - 5; row += 4) {
+    ctx.fillStyle = row % 8 ? '#7a7f96' : '#868ba3';
+    ctx.fillRect(x, y + row, w, 4);
+    ctx.fillStyle = '#5c6075';
+    ctx.fillRect(x, y + row + 3, w, 1);
+  }
+  // Faixa de atenção
+  for (let col = 0; col < w; col += 6) {
+    ctx.fillStyle = (col / 6) % 2 ? '#2b2b33' : '#f2b84b';
+    ctx.fillRect(x + col, y + h - 5, 6, 5);
+  }
+}
+
+function paintDormer(ctx, cx, cy) {
+  ctx.fillStyle = WOOD.o;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f4ecdc';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#5f8fc8';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f4ecdc';
+  ctx.fillRect(cx - 5, cy - 0.5, 10, 1);
+  ctx.fillRect(cx - 0.5, cy - 5, 1, 10);
+  ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.fillRect(cx - 3, cy - 3, 2, 1);
 }
 
 function paintSignBoard(ctx, centerX, y, text) {
@@ -161,11 +437,30 @@ function paintTower(ctx, b) {
   ctx.fillRect(right - 18, Y + 30, 18, H - 30);
   ctx.fillStyle = '#a9b0cf';
   ctx.fillRect(left, Y + 30, 10, H - 30);
-  ctx.fillStyle = 'rgba(40,40,70,.25)';
-  for (let row = Y + 36; row < Y + H; row += 10) {
-    ctx.fillRect(left, row, right - left, 1);
-    const offset = ((row - Y) / 10) % 2 ? 10 : 0;
-    for (let col = left + offset; col < right; col += 20) ctx.fillRect(col, row, 1, 10);
+  // Blocos de pedra, cada um com luz em cima e sombra embaixo
+  for (let row = Y + 30, r = 0; row < Y + H - 4; row += 10, r++) {
+    for (let col = left + (r % 2 ? -10 : 0); col < right; col += 20) {
+      const bx = Math.max(left, col);
+      const bw = Math.min(col + 19, right) - bx;
+      if (bw <= 0) continue;
+      const tone = hash(col, r, 21);
+      const side = bx > right - 22 ? -0.12 : bx < left + 12 ? 0.08 : 0;
+      ctx.fillStyle = shade('#9097b8', side + (tone > 0.7 ? 0.07 : tone < 0.25 ? -0.07 : 0));
+      ctx.fillRect(bx, row, bw, 9);
+      ctx.fillStyle = 'rgba(255,255,255,.22)';
+      ctx.fillRect(bx, row, bw, 1);
+      ctx.fillStyle = 'rgba(30,30,60,.3)';
+      ctx.fillRect(bx, row + 8, bw, 1);
+    }
+  }
+  // Hera subindo pela lateral
+  for (let i = 0; i < 17; i++) {
+    const vy = Y + H - 8 - i * 6 - hash(i, 3, 22) * 4;
+    const vx = left + 2 + Math.sin(i * 0.9) * 5 + hash(i, 4, 22) * 4;
+    ctx.fillStyle = i % 3 ? '#3f7f34' : '#2e5e2a';
+    ctx.fillRect(vx, vy, 4, 3);
+    ctx.fillStyle = '#6cbf55';
+    ctx.fillRect(vx, vy, 2, 1);
   }
 
   // Janelas em arco com luz azul
@@ -211,6 +506,7 @@ function paintTower(ctx, b) {
 /* ---------- Objetos: partes fixas ---------- */
 
 export function paintProp(ctx, prop) {
+  if (paintPixelProp(ctx, prop)) return;
   const X = prop.x * T;
   const Y = prop.y * T;
   switch (prop.type) {
@@ -383,7 +679,7 @@ export function paintCoreBase(ctx, core) {
 
 export function drawLampLight(ctx, prop, lit, t) {
   const x = prop.x * T + 16;
-  const y = prop.y * T + 6;
+  const y = prop.y * T;
   if (lit) {
     const pulse = 0.85 + Math.sin(t * 3 + prop.x) * 0.08;
     const glow = ctx.createRadialGradient(x, y, 2, x, y, 40);
@@ -392,12 +688,7 @@ export function drawLampLight(ctx, prop, lit, t) {
     ctx.fillStyle = glow;
     ctx.fillRect(x - 40, y - 40, 80, 80);
   }
-  ctx.fillStyle = '#2b2b33';
-  ctx.fillRect(x - 6, y - 4, 12, 13);
-  ctx.fillStyle = lit ? '#ffe08a' : '#5b5f73';
-  ctx.fillRect(x - 4, y - 2, 8, 9);
-  ctx.fillStyle = '#2b2b33';
-  ctx.fillRect(x - 7, y - 6, 14, 3);
+  drawLampHead(ctx, x, y + 6, lit);
 }
 
 export function drawCrystalProp(ctx, prop, t, energy = 1) {

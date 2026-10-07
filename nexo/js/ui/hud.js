@@ -28,6 +28,7 @@ export function hudMarkup() {
         <div>
           <span class="hud-card__name"></span>
           <span class="hud-card__zone"></span>
+          <span class="hud-card__weather" aria-live="polite"></span>
         </div>
       </div>
       <div class="hud-quest" aria-live="polite">
@@ -69,6 +70,11 @@ export function refreshHud() {
     slot.disabled = Boolean(tool.needs) && !state.inv.includes(tool.needs);
   }
   qs('.slot[data-action="compass"]', root).setAttribute('aria-pressed', String(document.body.classList.contains('compass')));
+}
+
+export function setWeatherLabel(text) {
+  if (!root || !root.isConnected) return;
+  qs('.hud-card__weather', root).textContent = text;
 }
 
 export function setZoneName(name) {

@@ -1,6 +1,7 @@
 /* NEXO — Desenho do mundo: camada fixa (pintada uma vez) + partes animadas a cada quadro */
 
-import { TILE, MAP_W, MAP_H, ground, BUILDINGS, PROPS, CORE, BARRIERS } from './map.js';
+import { TILE, MAP_W, MAP_H, ground, BUILDINGS, PROPS, CORE, BARRIERS, DECOR } from './map.js';
+import { paintDecor } from '../art/decor.js';
 import { paintTerrain } from '../art/terrain.js';
 import {
   paintBuilding, paintProp, paintCoreBase,
@@ -10,7 +11,30 @@ import {
 import { drawCharacter } from '../art/characters.js';
 import { outlinedText } from '../art/shapes.js';
 import { drawQuestObjects, drawCarried, drawEffects } from './quest-layer.js';
-import { drawGrass, drawWater, drawLeaves, drawLight, updateScenery } from './scenery.js';
+import { drawGrass, drawWater, drawLeaves, drawLight, updateScenery, wind } from './scenery.js';
+import { drawTree, TREE_VARIANTS } from '../art/trees.js';
+import { weatherNow, drawSplashes, drawWeatherScreen } from './weather.js';
+import { hash } from '../art/shapes.js';
+import { prefersCalm } from '../core/state.js';
+
+/* Árvores: uma por bloco de mata, com pequenas variações de posição e de espécie.
+ * São desenhadas a cada quadro, junto com os personagens, para o vento e a profundidade. */
+const TREES = [];
+ground.forEach((row, ty) => row.forEach((char, tx) => {
+  if (char !== 'T') return;
+  const r = hash(tx, ty, 500);
+  const variant = r < 0.24 ? 3 + (hash(tx, ty, 501) > 0.5 ? 1 : 0) // pinheiros
+    : r < 0.3 ? 2 // macieira
+      : r < 0.33 ? 5 // florida
+        : r < 0.36 ? 6 // outono
+          : hash(tx, ty, 502) > 0.5 ? 0 : 1;
+  TREES.push({
+    x: tx * TILE + 16 + Math.round((hash(tx, ty, 503) - 0.5) * 10),
+    y: ty * TILE + 28 + Math.round(hash(tx, ty, 504) * 5),
+    variant: variant % TREE_VARIANTS,
+    phase: hash(tx, ty, 505) * 3,
+  });
+}));
 
 let baseLayer = null;
 
@@ -25,6 +49,7 @@ export function getBaseLayer() {
 
   // Objetos e construções de cima para baixo, para que o que está mais ao sul fique na frente
   const drawables = [
+    ...DECOR.map((item) => ({ bottom: item.y + (item.solid ? 1 : 0.5), paint: () => paintDecor(ctx, item) })),
     ...PROPS.map((prop) => ({ bottom: prop.y + (prop.h ?? 1), paint: () => paintProp(ctx, prop) })),
     ...BUILDINGS.map((b) => ({ bottom: b.y + b.h, paint: () => paintBuilding(ctx, b) })),
     { bottom: CORE.y + CORE.h, paint: () => paintCoreBase(ctx, CORE) },
@@ -52,7 +77,7 @@ export function renderWorld(ctx, frame) {
   drawGrass(ctx, t, view, player);
 
   for (const b of BUILDINGS) {
-    if (b.kind === 'house' || b.kind === 'farmhouse') drawSmoke(ctx, b, t + b.x);
+    if (b.kind === 'house') drawSmoke(ctx, b, t + b.x);
     if (b.kind === 'tower') drawTowerCrystal(ctx, b, progress.isDone('r5') ? 1 : 0, t);
     if (b.kind === 'station') drawStationSignal(ctx, b, progress.isDone('r4'), t);
   }
@@ -75,27 +100,42 @@ export function renderWorld(ctx, frame) {
 
   if (compass) drawCompassRings(ctx, world.interactables, t);
 
-  // Personagens ordenados pela altura dos pés (quem está mais ao sul fica na frente)
-  [...actors].sort((a, b) => a.y - b.y).forEach((actor) => {
+  // Personagens e árvores ordenados pela base (quem está mais ao sul fica na frente)
+  const calm = prefersCalm();
+  const strength = frame.windStrength ?? 1;
+  const drawables = actors.map((actor) => ({ y: actor.y, actor }));
+  for (const tree of TREES) {
+    if (tree.x < view.x - 40 || tree.x > view.x + view.w + 40 || tree.y < view.y - 4 || tree.y > view.y + view.h + 80) continue;
+    drawables.push({ y: tree.y, tree });
+  }
+  drawables.sort((a, b) => a.y - b.y).forEach(({ actor, tree }) => {
+    if (tree) {
+      const sway = calm ? 0 : (wind(tree.x, tree.y, t + tree.phase) * 1.3 + Math.sin(t * 2.3 + tree.phase * 4) * 0.5) * strength;
+      drawTree(ctx, tree.x, tree.y, tree.variant, sway);
+      return;
+    }
     drawCharacter(ctx, actor.x, actor.y, actor.look, actor.pose);
     if (actor.label) {
-      outlinedText(ctx, actor.label, actor.x, actor.y + 10, { font: '700 10px "Pixelify Sans", sans-serif' });
+      outlinedText(ctx, actor.label, actor.x, actor.y + 10, { font: '700 10px "Fredoka", sans-serif' });
     }
-    if (actor.alert) drawAlert(ctx, actor.x, actor.y - 54 + Math.sin(t * 4) * 3);
+    if (actor.alert) drawAlert(ctx, actor.x, actor.y - 64 + Math.sin(t * 4) * 3);
     if (actor.isPlayer) drawCarried(ctx, actor.x, actor.y, t, actor.frame);
   });
 
   drawEffects(ctx);
   drawLeaves(ctx);
+  drawSplashes(ctx);
 
-  if (focus) drawPrompt(ctx, focus.x, focus.promptY ?? focus.y - 64, t);
+  if (focus) drawPrompt(ctx, focus.x, focus.promptY ?? focus.y - 72, t);
 
   drawAmbient(ctx, world.ambient, t, view);
 
   // Efeitos de tela (sem câmera)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const { width, height } = ctx.canvas;
-  drawLight(ctx, width, height, t);
+  const weather = weatherNow();
+  drawLight(ctx, width, height, t, weather.sun);
+  drawWeatherScreen(ctx, width, height, t);
   if (progress.gloom > 0) {
     ctx.fillStyle = `rgba(60, 36, 110, ${progress.gloom})`;
     ctx.fillRect(0, 0, width, height);
@@ -127,7 +167,7 @@ function drawPrompt(ctx, x, y, t) {
   ctx.fillRect(x - 12, y - 12 + bob, 24, 22);
   ctx.fillStyle = '#fbf1d9';
   ctx.fillRect(x - 10, y - 10 + bob, 20, 18);
-  outlinedText(ctx, 'E', x, y + bob, { font: '700 13px "Pixelify Sans", sans-serif', fill: '#4f3019', stroke: '#fbf1d9' });
+  outlinedText(ctx, 'E', x, y + bob, { font: '700 13px "Fredoka", sans-serif', fill: '#4f3019', stroke: '#fbf1d9' });
 }
 
 function drawCompassRings(ctx, interactables, t) {
@@ -176,7 +216,7 @@ export function updateAmbient(ambient, dt, t, view = { x: 0, y: 0, w: 0, h: 0 })
 }
 
 function drawAmbient(ctx, ambient, t, view) {
-  ctx.fillStyle = 'rgba(30, 40, 60, .08)';
+  ctx.fillStyle = `rgba(30, 40, 60, ${weatherNow().clouds})`;
   for (const cloud of ambient.clouds) {
     if (!isVisible(cloud.x - cloud.r, cloud.y - cloud.r, cloud.r * 2, cloud.r * 2, view)) continue;
     ctx.beginPath();

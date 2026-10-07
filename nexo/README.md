@@ -13,7 +13,7 @@ As fontes vêm do Google Fonts. Sem internet, o jogo funciona com fontes do sist
 
 ## Trilha sonora
 
-A música fica em `audio/trilha.mp4` e toca em loop. Os navegadores só permitem som depois de um gesto do jogador, por isso ela começa no primeiro clique, toque ou tecla. Ela pausa quando a aba fica escondida. Em **Opções** (tela de título ou pausa) dá para desligar a música e ajustar o volume; a escolha fica salva. Para trocar a trilha, substitua o arquivo mantendo o mesmo nome (MP4 ou, mudando o nome em `js/core/music.js`, MP3/OGG).
+As músicas ficam na pasta `audio/` e tocam em sequência, na ordem da lista `TRACKS` em `js/core/music.js`; ao fim da lista, recomeçam. Na troca de faixa há um crossfade de 4 segundos (a que termina some enquanto a próxima entra em fade-in). Para incluir, tirar ou reordenar faixas, edite a lista `TRACKS` (MP3, MP4 ou OGG). Uma faixa que não carregar é pulada. Os navegadores só permitem som depois de um gesto do jogador, por isso a trilha começa no primeiro clique, toque ou tecla. Ela pausa quando a aba fica escondida. Em **Opções** (tela de título ou pausa) dá para desligar a música e ajustar o volume; a escolha fica salva.
 
 ## Controles
 
@@ -69,6 +69,13 @@ As regiões se abrem em ordem: uma ruptura de energia bloqueia cada caminho até
 
 ## Animação e cenário
 
+- **Personagens** (`js/art/sprite.js`): pixel art de 24 × 48 em três vistas (frente, costas e perfil), com cabelo em mechas, olhos com cílio, íris e brilho, dobras de roupa, mãos e sapatos com cadarço. Caminhada de 6 quadros.
+- **Árvores** (`js/art/trees.js`): carvalhos, pinheiros, macieiras, árvores floridas e de outono. A copa é feita de tufos sombreados; o vento entorta mais o topo que a base, e o personagem passa atrás delas.
+- **Enfeites** (`js/art/decor.js`, posições em `js/world/map.js`): arbustos, pedras com musgo, tocos, troncos, cogumelos, flores, feno, abóboras e bancos. Os grandes ficam só na borda das clareiras, sem fechar caminhos.
+- **Moradores** (`js/data/villagers.js`, `js/world/villagers.js`): 9 moradores passeiam pela praça, Vale, Mercado, Oficina e Torre, olham para o jogador e conversam (E).
+- **Clima** (`js/world/weather.js`): ensolarado, nublado, chuva e neblina, com transição suave. Muda a luz, as sombras das nuvens, a força do vento, a chuva com respingos e a neblina. O clima atual aparece no HUD.
+
+
 - `js/art/sprite.js` desenha o personagem (20 × 40 pixels, sombreado em 5 tons) a partir de uma **pose**: passo das pernas, quanto o corpo desce, braços (descansando, balançando, à frente, a meio caminho, erguidos, enxada em cima ou no chão) e olhos (abertos ou piscando). Cada pose fica em cache.
 - `js/art/animator.js` toca **clipes de keyframes**: parado (respiração), andar, levantar, cavar, colher e manusear. A pose troca a cada quadro; a escala e a elevação são interpoladas entre quadros (squash and stretch). Eventos de passo e impacto soltam poeira, terra ou grama.
 - `js/world/scenery.js` deixa o mapa vivo: grama balançando com rajadas de vento (e se afastando dos pés do jogador), água com ondas, reflexos e anéis, folhas caindo e raios de sol suaves.
@@ -83,11 +90,13 @@ css/
   screens.css         título e criação de personagem
   game.css            HUD, barra de ferramentas, diálogos, janelas
   mission.css         janela de missão e componentes das mecânicas
+  profiles.css        escolha de perfil e Painel do Professor
 js/
   main.js             inicialização
   core/               estado e salvamento, registro de pesquisa, utilidades de DOM
-  data/               regiões e personagens
-  game/               progresso (regiões abertas) e sessão de missão (tentativas, dicas, conclusão)
+  data/               regiões, personagens, moradores e grade curricular
+  game/               progresso (regiões abertas), sessão de missão (tentativas, dicas, conclusão),
+                      estatísticas por missão/etapa e avaliação por tópico (Painel do Professor)
   missions/           um arquivo por região + playfield.js (mesa de jogo: arrastar, soltar,
                       alavancas, mostradores), props-art.js (desenho dos objetos) e widgets.js
   world/              mapa, renderização, entrada do jogador, história (falas)
@@ -97,12 +106,46 @@ js/
 
 Cada missão é um objeto com textos (`context`, `goal`, `hints`), dados da Visão pedagógica (`concept`, `prerequisites`, `relation`, `categories`) e uma função `mount(stage, api)`, que monta a cena com `createPlayfield` e informa tentativas (`api.attempt`), erros (`api.fail`), conclusão (`api.win`) e o Registro técnico (`api.record`).
 
+### Objetos em pixel art
+
+`js/art/pixel.js` é o motor de pixel art dos objetos: cada um é pintado pixel a pixel (1 pixel da grade = 1 pixel do mundo) com rampas de 5 tons, luz pela normal da superfície (esfera, cilindro, caixa), pontilhado só na troca de tom e contorno na cor escura do material. Os desenhos ficam em cache. `js/art/items.js` tem os objetos das missões (saco de sementes, cuia, semeadeira, baldes, comporta, cesto, caldeirão, pacotes, canteiros e brotos) e `js/art/props.js` os objetos do mapa (postes, caixotes, barris, cercas, placas, mural, bancas, chafariz, bases dos cristais e das engrenagens). Partes que se mexem (roda da semeadeira, volante da comporta, fogo) têm quadros próprios.
+
+## Perfis: Aluno e Professor
+
+Ao abrir o jogo aparece **Quem vai jogar?**:
+
+- **Aluno**: cada aluno escolhe o próprio nome na lista ou se cadastra em **Novo aluno**. No primeiro acesso ele vai direto para a criação do personagem; depois, para a tela de título (continuar, diário, **Trocar de perfil**). Cada aluno tem o seu progresso salvo separadamente.
+- **Professor**: botão **Área do professor** (ou o atalho **Ctrl + Shift + P**). No primeiro acesso o professor cria uma senha (mínimo de 4 caracteres). Depois, entra no **Painel do Professor**.
+
+O Painel mostra a lista de alunos (com busca e cadastro) e, para cada um:
+
+- **nível** na jornada (região atual) e missões concluídas;
+- **métricas**: acertos, erros, taxa de acerto, tempo médio por missão, tempo total e dicas pedidas;
+- **avaliação de conhecimento** por tópico da grade curricular: *Dominado*, *Em desenvolvimento*, *Precisa de reforço*, *Não iniciado* ou *Em breve no jogo*, com a missão sugerida para retomar o que precisa de reforço;
+- **tabela de missões** com situação, acertos, erros, dicas e tempos.
+
+Também dá para renomear, zerar o progresso ou excluir um aluno, trocar a senha, **exportar a turma em CSV** (uma linha por aluno e missão, com a situação de cada tópico) e apagar todos os dados do computador.
+
+Tudo fica no `localStorage` deste navegador (chave `nexo_escola_v1`). A senha guarda só um resumo (SHA-256), mas é uma proteção simples: evita que um aluno entre no painel por engano, não protege contra quem tem acesso ao computador. Um save antigo (de antes dos perfis) vira um aluno automaticamente.
+
+### Grade curricular
+
+`js/data/curriculum.js` lista os tópicos do Ensino Fundamental em ordem de progressão e diz em quais missões (e em quais etapas das missões de mundo) cada um é observado:
+
+| Faixa | Tópicos | Missões |
+|---|---|---|
+| Anos Iniciais | contagem, adição, subtração, multiplicação, divisão, frações (metade, terço) | Partilha das Sementes, Comportas do Vale, Bancas do Mercado, Máquina de Produção |
+| Anos Finais | frações de quantidades, razão, porcentagem, proporcionalidade, relações entre grandezas, linguagem algébrica, equação do 1º grau, função afim | Comportas, Bancas, Caldeirão, Oficina, Rotas, Torre, Núcleo |
+| Em breve | geometria (formas e simetria; perímetro e área), equação do 2º grau | ainda sem missão: o painel mostra a ideia planejada |
+
+O motor de missões (`js/game/session.js`) grava em `js/game/stats.js`, para cada missão e etapa, acertos (`api.attempt(true)`), erros (`api.attempt(false)`), dicas, apoios automáticos e tempo. `js/game/assessment.js` cruza essas contagens com a grade para montar o relatório. As etapas são informadas pelas missões com `api.setStage(i)`.
+
 ## Modo Pesquisa
 
 Na tela de título, abra **Modo Pesquisa**, informe um ID (sem nome real) e ative o registro. Só então os eventos são gravados no navegador. Exporte JSON ou CSV ao fim de cada sessão e use um ID por estudante. Os tipos de evento são os mesmos das versões anteriores (os dados de algumas tentativas mudaram junto com as mecânicas): `attempt`, `hint_request`, `support_triggered`, `success`, `retry`, `mission_start`, `mission_end`, `region_enter`, `region_return`, `interaction`, `calculator_use`.
 
 ## Reset e debug
 
-**Opções > Apagar tudo** remove progresso e registros, com confirmação. Com `index.html?debug=1` aparece o botão que libera todas as regiões.
+**Opções > Apagar meu progresso** (tela de título do aluno) zera o progresso daquele aluno. **Apagar todos os dados** (Painel do Professor) remove todos os alunos, registros e a senha. Com `index.html?debug=1` aparece o botão que libera todas as regiões.
 
 Os dados do Diário são indícios situados, não nota nem diagnóstico. O uso com estudantes depende de autorização institucional, consentimento dos responsáveis e assentimento dos participantes.

@@ -5,7 +5,7 @@
 
 import { roundRect, circle, drawCrystal, outlinedText } from '../art/shapes.js';
 
-const pixelFont = (size) => `700 ${size}px "Pixelify Sans", sans-serif`;
+const pixelFont = (size) => `700 ${size}px "Fredoka", sans-serif`;
 
 export const artLever = (pulled = false, color = '#c2453b') => (ctx, w, h) => {
   ctx.fillStyle = '#4b4560';

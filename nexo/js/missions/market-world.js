@@ -12,13 +12,14 @@
 
 import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
 import { drawCrystal } from '../art/shapes.js';
+import { drawCrystalPack, drawWickerBasket, drawIronCauldron } from '../art/items.js';
 
 const TILE = 32;
 
 /* ---------- Desenho compartilhado ---------- */
 
 function drawTag(ctx, x, y, text, { fill = '#fbf3df', ink = '#2b1d14' } = {}) {
-  ctx.font = '700 8px "Pixelify Sans", sans-serif';
+  ctx.font = '700 8px "Fredoka", sans-serif';
   const width = Math.ceil(ctx.measureText(text).width) + 8;
   const left = Math.round(x - width / 2);
   const top = Math.round(y - 6);
@@ -33,15 +34,7 @@ function drawTag(ctx, x, y, text, { fill = '#fbf3df', ink = '#2b1d14' } = {}) {
 }
 
 function drawPack(ctx, x, y, color) {
-  ctx.fillStyle = '#4f3019';
-  ctx.fillRect(x - 6, y - 7, 12, 9);
-  ctx.fillStyle = '#c9a26b';
-  ctx.fillRect(x - 5, y - 6, 10, 7);
-  ctx.fillStyle = color;
-  ctx.fillRect(x - 5, y - 6, 10, 2);
-  ctx.fillStyle = '#7ff0e0';
-  ctx.fillRect(x - 3, y - 3, 2, 2);
-  ctx.fillRect(x + 1, y - 3, 2, 2);
+  drawCrystalPack(ctx, x, y, color);
 }
 
 /* ======================================================================
@@ -92,12 +85,20 @@ function mountStallsWorld(api) {
   const basketItem = {
     label: 'cesto',
     draw: (ctx) => {
-      ctx.fillStyle = '#7d5530';
-      ctx.fillRect(-9, -6, 18, 8);
-      ctx.fillStyle = '#b98a52';
-      ctx.fillRect(-8, -5, 16, 6);
-      basket.slice(0, 6).forEach((id, i) => drawPack(ctx, -6 + (i % 3) * 6, -6 - Math.floor(i / 3) * 4, STALLS.find((s) => s.id === id).color));
-      drawTag(ctx, 0, -18, `${crystals()} cristais`);
+      // Pacotes atrás da borda da frente do cesto
+      basket.slice(0, 6).forEach((id, i) => {
+        ctx.save();
+        ctx.translate(-5 + (i % 3) * 5, -5 - Math.floor(i / 3) * 3);
+        ctx.scale(0.62, 0.62);
+        drawPack(ctx, 0, 0, STALLS.find((s) => s.id === id).color);
+        ctx.restore();
+      });
+      ctx.save();
+      ctx.translate(0, 2);
+      ctx.scale(0.8, 0.8);
+      drawWickerBasket(ctx, 0, 0, { leaves: false, shadow: false });
+      ctx.restore();
+      drawTag(ctx, 0, -20, `${crystals()} cristais`);
     },
   };
   const refreshHands = () => setCarried(basket.length ? basketItem : null);
@@ -361,45 +362,17 @@ function mountCauldronWorld(api) {
 }
 
 function drawLeafBasket(ctx, x, y) {
-  ctx.fillStyle = 'rgba(30, 20, 40, .3)';
-  ctx.fillRect(x - 11, y - 1, 22, 3);
-  ctx.fillStyle = '#7d5530';
-  ctx.fillRect(x - 11, y - 10, 22, 10);
-  ctx.fillStyle = '#a0703f';
-  ctx.fillRect(x - 10, y - 9, 20, 8);
-  for (let i = 0; i < 7; i++) {
-    ctx.fillStyle = i % 2 ? '#7fd36a' : '#5aa84a';
-    ctx.fillRect(x - 9 + i * 3, y - 13 + (i % 3), 4, 3);
-  }
-  drawTag(ctx, x, y - 24, 'folhas');
+  drawWickerBasket(ctx, x, y);
+  drawTag(ctx, x, y - 26, 'folhas');
 }
 
 function drawCauldron(ctx, x, y, leaves, dew, mood, order, t) {
-  // Fogo
-  for (let i = 0; i < 4; i++) {
-    const flicker = Math.round(Math.sin(t * 12 + i * 2) * 1.5);
-    ctx.fillStyle = i % 2 ? '#ff9f3a' : '#ffd25a';
-    ctx.fillRect(x - 9 + i * 5, y - 4 - flicker, 3, 4 + flicker);
-  }
-  ctx.fillStyle = 'rgba(30, 20, 40, .35)';
-  ctx.fillRect(x - 14, y - 1, 28, 3);
-  ctx.fillStyle = '#1d1a24';
-  ctx.fillRect(x - 13, y - 20, 26, 16);
-  ctx.fillRect(x - 11, y - 4, 22, 2);
-  ctx.fillStyle = '#3b3b46';
-  ctx.fillRect(x - 12, y - 19, 24, 3);
   const liquid = mood === 'ok' ? '#5fe3d0' : mood === 'spoiled' ? '#3d6b2a' : leaves || dew ? '#4f7f9a' : '#2b3550';
-  ctx.fillStyle = liquid;
-  ctx.fillRect(x - 11, y - 20, 22, 3);
-  for (let i = 0; i < 3; i++) {
-    const phase = (t * (mood === 'ok' ? 1.6 : 0.7) + i / 3) % 1;
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.6 * (1 - phase)})`;
-    ctx.fillRect(x - 6 + i * 6, y - 22 - phase * 10, 2, 2);
-  }
-  if (mood === 'ok') drawCrystal(ctx, x, y - 30 + Math.sin(t * 3) * 2, 4, { glow: 1.4 });
-  drawTag(ctx, x - 22, y - 34, `${leaves} folhas`);
-  drawTag(ctx, x + 22, y - 34, `${dew} gotas`);
-  drawTag(ctx, x, y - 50, `pedido: ${order} frascos`, { fill: '#fff6dc' });
+  drawIronCauldron(ctx, x, y, liquid, t, mood === 'ok' ? 1.6 : 0.7);
+  if (mood === 'ok') drawCrystal(ctx, x, y - 34 + Math.sin(t * 3) * 2, 4, { glow: 1.4 });
+  drawTag(ctx, x - 22, y - 38, `${leaves} folhas`);
+  drawTag(ctx, x + 22, y - 38, `${dew} gotas`);
+  drawTag(ctx, x, y - 54, `pedido: ${order} frascos`, { fill: '#fff6dc' });
 }
 
 export default {

@@ -61,7 +61,7 @@ export function openQuestTracker({ mission, region, npc, onHint, onLeave }) {
     speech.textContent = text;
     tracker.dataset.tone = tone;
     drawPortrait(portrait, npc.look, TONES[tone] ?? 'neutral', region.accent);
-    showBubble(npcFoot.x, npcFoot.y - 44, text);
+    showBubble(npcFoot.x, npcFoot.y - 54, text);
     tracker.classList.remove('is-pulsing');
     void tracker.offsetWidth;
     tracker.classList.add('is-pulsing');

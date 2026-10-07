@@ -7,6 +7,7 @@ import { isMissionDone, isRegionDone, isRegionOpen, isRegionOpenById, currentReg
 import { startMission } from '../game/session.js';
 import { showDialogue } from '../ui/dialogue.js';
 import { runtime } from '../core/runtime.js';
+import { talkToVillager } from './villagers.js';
 
 /** Falas dos guardiões de região: primeira conversa, retorno e região concluída. */
 const LINES = {
@@ -41,8 +42,10 @@ const LINES = {
 export function interact(target) {
   // Durante uma missão de mundo, o personagem da missão repete a orientação atual
   const session = runtime.session;
-  if (target.kind === 'npc' && session?.inWorld && session.npc === target.id) return session.talk();
+  if (target.kind === 'npc' && session?.inWorld && !session.done && session.npc === target.id) return session.talk();
   switch (target.kind) {
+    case 'villager':
+      return talkToVillager(target.villager);
     case 'quest':
       return target.object.onInteract();
     case 'npc':

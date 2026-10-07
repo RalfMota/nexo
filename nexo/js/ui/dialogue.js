@@ -20,13 +20,16 @@ const accentFor = (npcId) => REGIONS.find((region) => region.npc === npcId)?.acc
 
 /**
  * Mostra uma fala.
- * @param {{ npcId?: string, title?: string, text: string,
+ * @param {{ npcId?: string, speaker?: { name: string, role: string, look: object, accent: string },
+ *           title?: string, text: string,
  *           choices?: { label: string, done?: boolean, onSelect?: () => void }[] }} options
+ *   npcId: personagem de missão; speaker: qualquer outro falante com retrato (moradores).
  */
-export function showDialogue({ npcId, title, text, choices = [{ label: 'Fechar' }] }) {
+export function showDialogue({ npcId, speaker, title, text, choices = [{ label: 'Fechar' }] }) {
   if (!container) return;
-  const npc = npcId ? CHARACTERS[npcId] : null;
-  container.style.setProperty('--accent', npc ? accentFor(npcId) : '#8a5a33');
+  const npc = npcId ? CHARACTERS[npcId] : speaker ?? null;
+  const accent = npcId ? accentFor(npcId) : speaker?.accent ?? '#8a5a33';
+  container.style.setProperty('--accent', accent);
   container.classList.toggle('dialogue--plain', !npc);
   container.innerHTML = `
     ${npc ? '<canvas class="portrait" width="128" height="128" aria-hidden="true"></canvas>' : ''}
@@ -37,7 +40,7 @@ export function showDialogue({ npcId, title, text, choices = [{ label: 'Fechar' 
       <div class="dialogue__choices"></div>
     </div>`;
 
-  if (npc) drawPortrait(qs('canvas', container), npc.look, 'neutral', accentFor(npcId));
+  if (npc) drawPortrait(qs('canvas', container), npc.look, 'neutral', accent);
 
   const choiceBox = qs('.dialogue__choices', container);
   choices.forEach((choice, index) => {

@@ -1,6 +1,6 @@
-/* NEXO — Pintura do terreno: grama, estradas, água, canteiros e árvores */
+/* NEXO — Pintura do terreno: grama, estradas, água e canteiros (as árvores ficam em trees.js) */
 
-import { hash, circle } from './shapes.js';
+import { hash } from './shapes.js';
 
 const T = 32;
 const isRoad = (char) => char === '=' || char === 'p';
@@ -21,13 +21,6 @@ export function paintTerrain(ctx, ground) {
       else if (char === '~') paintWater(ctx, px, py, x, y, at);
       else if (char === '#') paintSoil(ctx, px, py, r);
       else paintGrass(ctx, px, py, x, y, r, char === 'T');
-    }
-  }
-
-  // Árvores por último, de cima para baixo, para as copas se sobreporem com profundidade
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (ground[y][x] === 'T') paintTree(ctx, x * T, y * T, hash(x, y, 7));
     }
   }
 }
@@ -270,51 +263,5 @@ function paintSoil(ctx, px, py, r) {
     dot(sx, 12, 1, 4, '#3f8a35');
     dot(sx - 2, 12, 2, 1, '#7fd36a');
     dot(sx + 1, 13, 2, 1, '#7fd36a');
-  }
-}
-
-function paintTree(ctx, px, py, r) {
-  const cx = px + 16;
-  ctx.fillStyle = 'rgba(0,0,0,.18)';
-  ctx.beginPath();
-  ctx.ellipse(cx, py + 28, 13, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  if (r < 0.28) {
-    // Pinheiro
-    ctx.fillStyle = '#6d4527';
-    ctx.fillRect(cx - 3, py + 20, 6, 10);
-    const layers = [
-      [py - 4, 9, '#2a6e3e'],
-      [py + 4, 12, '#2f7a43'],
-      [py + 11, 15, '#357f48'],
-    ];
-    for (const [top, half, color] of layers) {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(cx, top);
-      ctx.lineTo(cx + half, top + 13);
-      ctx.lineTo(cx - half, top + 13);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.fillStyle = '#4c9a5c';
-    ctx.fillRect(cx - 4, py + 6, 3, 3);
-    return;
-  }
-
-  // Árvore de copa redonda
-  ctx.fillStyle = '#6d4527';
-  ctx.fillRect(cx - 4, py + 17, 8, 13);
-  ctx.fillStyle = '#56351d';
-  ctx.fillRect(cx + 1, py + 17, 3, 13);
-  circle(ctx, cx, py + 9, 15, '#2f7d3b');
-  circle(ctx, cx - 4, py + 6, 11, '#3d9446');
-  circle(ctx, cx - 6, py + 2, 6, '#57ad55');
-  if (r > 0.86) {
-    ctx.fillStyle = '#e8473c';
-    ctx.fillRect(cx + 5, py + 6, 3, 3);
-    ctx.fillRect(cx - 7, py + 12, 3, 3);
-    ctx.fillRect(cx + 2, py + 15, 3, 3);
   }
 }

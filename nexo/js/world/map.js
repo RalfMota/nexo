@@ -6,6 +6,7 @@
  */
 
 import { CHARACTERS } from '../data/characters.js';
+import { hash } from '../art/shapes.js';
 
 export const TILE = 32;
 export const MAP_W = 60;
@@ -140,6 +141,75 @@ export const BARRIERS = [
 
 export const SPAWN = { x: 30 * TILE + 16, y: 24 * TILE + 28 };
 
+/* ---------- Enfeites do cenário ----------
+ * Grandes (arbustos, pedras, tocos, troncos) só na borda das clareiras, longe de estradas,
+ * entradas e objetos de missão: bloqueiam a passagem sem fechar caminhos.
+ * Pequenos (flores, cogumelos, pedrinhas, touceiras) espalhados na grama: não bloqueiam.
+ */
+export const DECOR = [];
+
+/** Pontos de missão e de passagem que precisam ficar livres (raio de 2 blocos). */
+const RESERVED = [
+  [11, 21], [8, 24], [5, 17], [11, 18], [8, 18], [8, 31], [5, 25], [11, 25],
+  [24, 36], [27, 36], [34, 36], [35, 37], [38, 40], [23, 38], [30, 41], [26, 38],
+];
+const occupied = new Set();
+const mark = (x, y, w = 1, h = 1) => {
+  for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) occupied.add(`${i},${j}`);
+};
+BUILDINGS.forEach((b) => mark(b.x - 1, b.y - 1, b.w + 2, b.h + 2));
+PROPS.forEach((prop) => mark(prop.x - 1, prop.y - 1, (prop.w ?? 1) + 2, (prop.h ?? 1) + 2));
+Object.values(CHARACTERS).forEach((npc) => mark(npc.tile.x - 1, npc.tile.y - 1, 3, 3));
+mark(CORE.x - 1, CORE.y - 1, CORE.w + 2, CORE.h + 2);
+mark(Math.floor(SPAWN.x / TILE) - 1, Math.floor(SPAWN.y / TILE) - 1, 3, 3);
+
+const insideZone = (zone, x, y) => x >= zone.rect[0] && x <= zone.rect[2] && y >= zone.rect[1] && y <= zone.rect[3];
+const nearReserved = (x, y) => RESERVED.some(([rx, ry]) => Math.abs(rx - x) <= 2 && Math.abs(ry - y) <= 2);
+/** Perto de estrada, calçada ou de uma entrada (grama fora da zona = corredor). */
+function nearPassage(zone, x, y) {
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      const char = ground[y + dy]?.[x + dx];
+      if (char === '=' || char === 'p') return true;
+      if (char === '.' && !ZONES.some((z) => insideZone(z, x + dx, y + dy))) return true;
+    }
+  }
+  return false;
+}
+
+const BIG = ['bush', 'bush', 'berryBush', 'rock', 'rock', 'stump', 'log'];
+const SMALL = ['flowers', 'flowers', 'flowers', 'mushrooms', 'pebbles', 'tallGrass', 'tallGrass'];
+
+for (const zone of ZONES) {
+  const [x0, y0, x1, y1] = zone.rect;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (ground[y][x] !== '.' || occupied.has(`${x},${y}`) || nearReserved(x, y)) continue;
+      const edge = x === x0 || x === x1 || y === y0 || y === y1;
+      const r = hash(x, y, 700);
+      if (edge && r < 0.38 && !nearPassage(zone, x, y)) {
+        DECOR.push({ type: BIG[Math.floor(hash(x, y, 701) * BIG.length)], x, y, solid: true });
+        mark(x, y);
+      } else if (!edge && r < 0.1) {
+        DECOR.push({ type: SMALL[Math.floor(hash(x, y, 702) * SMALL.length)], x, y, solid: false });
+      }
+    }
+  }
+}
+
+// Enfeites de cada região
+[
+  { type: 'hay', x: 8, y: 14, solid: true },
+  { type: 'hay', x: 2, y: 19, solid: true },
+  { type: 'pumpkin', x: 13, y: 24, solid: false },
+  { type: 'pumpkin', x: 4, y: 30, solid: false },
+  { type: 'pumpkin', x: 10, y: 31, solid: false },
+  { type: 'bench', x: 25, y: 18, solid: true },
+  { type: 'bench', x: 34, y: 18, solid: true },
+  { type: 'flowers', x: 22, y: 22, solid: false },
+  { type: 'flowers', x: 37, y: 22, solid: false },
+].forEach((item) => DECOR.push(item));
+
 /* Mapa de bloqueios estáticos (terreno, construções, objetos, personagens) */
 const solid = Array.from({ length: MAP_H }, (_, y) => ground[y].map((char) => char === 'T' || char === '~'));
 
@@ -153,6 +223,7 @@ for (const b of BUILDINGS) block(b.x, b.y, b.w, b.h);
 for (const prop of PROPS) block(prop.x, prop.y, prop.w ?? 1, prop.h ?? 1);
 for (const npc of Object.values(CHARACTERS)) block(npc.tile.x, npc.tile.y);
 block(CORE.x, CORE.y, CORE.w, CORE.h);
+for (const item of DECOR) if (item.solid) block(item.x, item.y);
 
 export function isStaticSolid(tileX, tileY) {
   if (tileX < 0 || tileY < 0 || tileX >= MAP_W || tileY >= MAP_H) return true;

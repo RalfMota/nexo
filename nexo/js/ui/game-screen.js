@@ -5,7 +5,8 @@ import { state } from '../core/state.js';
 import { runtime } from '../core/runtime.js';
 import { startWorld, stopWorld } from '../world/world.js';
 import { leaveMission } from '../game/session.js';
-import { hudMarkup, mountHud } from './hud.js';
+import { hudMarkup, mountHud, setWeatherLabel } from './hud.js';
+import { onWeatherChange } from '../world/weather.js';
 import { mountDialogue, closeDialogue, isDialogueOpen } from './dialogue.js';
 import { mountMissionLayer } from './mission-view.js';
 import { openModal, closeModal, isModalOpen } from './modal.js';
@@ -18,6 +19,7 @@ import { showTitle } from './title-screen.js';
 const SHORTCUTS = { m: 'map', j: 'journal', i: 'items', c: 'calculator', q: 'compass', escape: 'menu' };
 
 let onShortcut = null;
+let stopWeatherLabel = null;
 
 export function showGame() {
   const app = qs('#app');
@@ -40,6 +42,7 @@ export function showGame() {
   mountDialogue(qs('.dialogue', game));
   mountMissionLayer(qs('.mission-layer', game));
   mountHud(game, runAction);
+  stopWeatherLabel = onWeatherChange((weather) => setWeatherLabel(`${weather.icon} ${weather.label}`));
   startWorld(qs('.game__world', game), {
     touchPad: qs('.touch-pad', game),
     touchAction: qs('.touch-action', game),
@@ -58,6 +61,7 @@ export function showGame() {
 
 function leaveGame() {
   stopWorld();
+  stopWeatherLabel?.();
   window.removeEventListener('keydown', onShortcut);
   onShortcut = null;
   closeCalculator();

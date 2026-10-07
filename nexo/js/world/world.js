@@ -16,6 +16,9 @@ import {
   questInteractables, updateQuestLayer, getCarried, setActionPlayer, footstep, burst,
 } from './quest-layer.js';
 import { createAnimator } from '../art/animator.js';
+import { updateWeather, weatherNow } from './weather.js';
+import { setWindStrength } from './scenery.js';
+import { updateVillagers, villagerActors, villagerInteractables } from './villagers.js';
 
 const SPEED = 115;     // pixels do mundo por segundo
 const REACH = 46;      // distância para conversar/interagir
@@ -150,7 +153,10 @@ function viewRect() {
 
 function update(dt) {
   updateAmbient(ambient, dt, time, viewRect());
+  updateWeather(dt, viewRect());
+  setWindStrength(weatherNow().wind);
   updateQuestLayer(dt);
+  updateVillagers(dt, player);
   lockedTiles = new Set(
     BARRIERS.filter((barrier) => !isRegionOpenById(barrier.region)).flatMap((barrier) => barrier.tiles.map(([x, y]) => `${x},${y}`)),
   );
@@ -251,6 +257,7 @@ function buildInteractables() {
     promptY: CORE.y * TILE - 34,
   });
   list.push(...questInteractables());
+  list.push(...villagerInteractables());
   return list;
 }
 
@@ -323,6 +330,7 @@ function buildActors() {
       alert: id === alertNpc && isRegionOpenForNpc(id),
     };
   });
+  actors.push(...villagerActors(player));
   actors.push({
     x: player.x,
     y: player.y,

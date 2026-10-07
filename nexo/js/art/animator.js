@@ -28,21 +28,23 @@ export const CLIPS = {
       k(0.25, { bob: 0 }, 1.006, 0.994),
     ],
   },
-  // Passos: o corpo sobe no passo e achata um pouco ao pisar
+  // Passos em 6 quadros: contato (pisa e achata), apoio e passagem (o corpo sobe)
   walk: {
     loop: true,
     keys: [
-      k(0.13, { legs: 1, bob: -1, arms: 'swingB' }, 0.985, 1.025, 1),
-      k(0.13, { legs: 2, bob: 0, arms: 'rest' }, 1.02, 0.975, 0, 'step'),
-      k(0.13, { legs: 3, bob: -1, arms: 'swingA' }, 0.985, 1.025, 1),
-      k(0.13, { legs: 0, bob: 0, arms: 'rest' }, 1.02, 0.975, 0, 'step'),
+      k(0.085, { legs: 0, bob: 0, arms: 'swing' }, 1.025, 0.97, 0, 'step'),
+      k(0.085, { legs: 1, bob: -1, arms: 'swing' }, 0.99, 1.015, 0.5),
+      k(0.085, { legs: 2, bob: -1, arms: 'swing' }, 0.98, 1.025, 1),
+      k(0.085, { legs: 3, bob: 0, arms: 'swing' }, 1.025, 0.97, 0, 'step'),
+      k(0.085, { legs: 4, bob: -1, arms: 'swing' }, 0.99, 1.015, 0.5),
+      k(0.085, { legs: 5, bob: -1, arms: 'swing' }, 0.98, 1.025, 1),
     ],
   },
   // Agacha, pega e ergue o objeto acima da cabeça
   lift: {
     keys: [
-      k(0.07, { bob: 1, arms: 'forward' }, 1.03, 0.97),
-      k(0.09, { crouch: true, bob: 3, arms: 'forward' }, 1.1, 0.88, 0, 'grab'),
+      k(0.07, { bob: 2, arms: 'forward' }, 1.03, 0.97),
+      k(0.09, { crouch: true, bob: 4, arms: 'forward' }, 1.1, 0.88, 0, 'grab'),
       k(0.07, { bob: 1, arms: 'half' }, 0.96, 1.06, 1),
       k(0.12, { bob: 0, arms: 'raised' }, 0.97, 1.05, 2),
       k(0.1, { bob: 0, arms: 'raised' }, 1, 1),
@@ -62,9 +64,9 @@ export const CLIPS = {
   // Agacha até o chão (plantar, colher, despejar) e levanta
   harvest: {
     keys: [
-      k(0.06, { bob: 1, arms: 'forward' }, 1.03, 0.97),
-      k(0.08, { crouch: true, bob: 3, arms: 'forward' }, 1.1, 0.88, 0, 'impact'),
-      k(0.16, { crouch: true, bob: 3, arms: 'forward' }, 1.04, 0.95),
+      k(0.06, { bob: 2, arms: 'forward' }, 1.03, 0.97),
+      k(0.08, { crouch: true, bob: 4, arms: 'forward' }, 1.1, 0.88, 0, 'impact'),
+      k(0.16, { crouch: true, bob: 4, arms: 'forward' }, 1.04, 0.95),
       k(0.08, { bob: 1, arms: 'half' }, 0.97, 1.04, 1),
       k(0.08, { bob: 0, arms: 'rest' }, 1, 1),
     ],

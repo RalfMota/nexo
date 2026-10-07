@@ -8,7 +8,7 @@ import { paintPanel } from './widgets.js';
 import { roundRect, outlinedText, drawCrystal } from '../art/shapes.js';
 import { prefersCalm } from '../core/state.js';
 
-const font = (size) => `700 ${size}px "Pixelify Sans", sans-serif`;
+const font = (size) => `700 ${size}px "Fredoka", sans-serif`;
 
 /* ---------- r5a: Grade de Energia (h = 3n + 1) ---------- */
 

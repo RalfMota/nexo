@@ -33,11 +33,18 @@ for (let y = 0; y < MAP_H; y++) {
   }
 }
 
+let windStrength = 1;
+
+/** Força do vento definida pelo clima (1 = brisa normal). */
+export function setWindStrength(value) {
+  windStrength = value;
+}
+
 /** Vento num ponto: balanço contínuo + rajadas que viajam pelo mapa da esquerda para a direita. */
-function wind(x, y, t) {
+export function wind(x, y, t) {
   const sway = Math.sin(t * 1.7 + x * 0.045 + y * 0.02) * 0.7;
   const gust = Math.max(0, Math.sin(t * 0.45 - x * 0.006 - y * 0.002)) ** 4 * 1.8;
-  return sway + gust;
+  return (sway + gust) * windStrength;
 }
 
 export function drawGrass(ctx, t, view, player) {
@@ -186,14 +193,14 @@ export function updateScenery(dt, t, view) {
 
 /* ---------- Luz (coordenadas da tela) ---------- */
 
-export function drawLight(ctx, width, height, t) {
+export function drawLight(ctx, width, height, t, sun = 1) {
   // Calor no alto da tela, como sol de fim de tarde
   const warm = ctx.createLinearGradient(0, 0, 0, height);
-  warm.addColorStop(0, 'rgba(255, 214, 140, .10)');
+  warm.addColorStop(0, `rgba(255, 214, 140, ${0.1 * sun})`);
   warm.addColorStop(0.5, 'rgba(255, 214, 140, 0)');
   ctx.fillStyle = warm;
   ctx.fillRect(0, 0, width, height);
-  if (prefersCalm()) return;
+  if (prefersCalm() || sun < 0.05) return;
 
   // Raios de sol diagonais que passeiam devagar
   ctx.save();
@@ -201,7 +208,7 @@ export function drawLight(ctx, width, height, t) {
   for (let i = 0; i < 3; i++) {
     const center = ((t * 12 + i * 420) % (width + 600)) - 300;
     const beamWidth = 70 + i * 40;
-    const alpha = 0.05 + 0.025 * Math.sin(t * 0.6 + i * 2);
+    const alpha = (0.05 + 0.025 * Math.sin(t * 0.6 + i * 2)) * sun;
     const gradient = ctx.createLinearGradient(center - beamWidth, 0, center + beamWidth, 0);
     gradient.addColorStop(0, 'rgba(255, 236, 180, 0)');
     gradient.addColorStop(0.5, `rgba(255, 236, 180, ${alpha})`);

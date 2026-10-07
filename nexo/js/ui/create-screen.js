@@ -4,7 +4,7 @@
  */
 
 import { qs, qsa, escapeHtml } from '../core/dom.js';
-import { state, saveState } from '../core/state.js';
+import { state, saveState, activeStudent } from '../core/state.js';
 import {
   PLAYER_ARTIFACTS, SKIN_TONES, HAIR_COLORS, OUTFIT_COLORS, HAIR_STYLES,
   TOP_STYLES, BOTTOM_STYLES, BOTTOM_COLORS, SHOE_COLORS, playerLook,
@@ -29,7 +29,7 @@ const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 export function showCreate() {
   const draft = {
-    name: '',
+    name: activeStudent()?.name ?? '',
     skin: SKIN_TONES[1],
     hairStyle: 'short',
     hair: HAIR_COLORS[0],
@@ -98,7 +98,7 @@ export function showCreate() {
               </div>
               <label class="creator__name">
                 <span class="option__label">Nome</span>
-                <input id="player-name" maxlength="20" placeholder="Reconector" autocomplete="off">
+                <input id="player-name" maxlength="20" placeholder="Reconector" autocomplete="off" value="${escapeHtml(draft.name.slice(0, 20))}">
               </label>
             </div>
             <div class="creator__editor">
@@ -225,8 +225,8 @@ export function showCreate() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, 320, 320);
     ctx.imageSmoothingEnabled = false;
-    ctx.setTransform(6, 0, 0, 6, 0, 0);
-    drawCharacter(ctx, 320 / 12, 46, playerLook(draft), { dir: DIRECTIONS[directionIndex], step, moving: true });
+    ctx.setTransform(5, 0, 0, 5, 0, 0);
+    drawCharacter(ctx, 32, 58, playerLook(draft), { dir: DIRECTIONS[directionIndex], step, moving: true });
   };
   frameId = requestAnimationFrame(draw);
 

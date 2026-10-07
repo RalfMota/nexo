@@ -10,6 +10,7 @@
  */
 
 import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
+import { drawWoodBucket, drawValveWheel } from '../art/items.js';
 
 const TILE = 32;
 const MAX_IN_HAND = 3;
@@ -221,7 +222,7 @@ function mountFloodgatesWorld(api) {
 /* ---------- Desenho ---------- */
 
 function drawTag(ctx, x, y, text) {
-  ctx.font = '700 8px "Pixelify Sans", sans-serif';
+  ctx.font = '700 8px "Fredoka", sans-serif';
   const width = Math.ceil(ctx.measureText(text).width) + 8;
   const left = Math.round(x - width / 2);
   const top = Math.round(y - 6);
@@ -236,20 +237,7 @@ function drawTag(ctx, x, y, text) {
 }
 
 function drawBucket(ctx, x, y) {
-  ctx.fillStyle = '#4b4f60';
-  ctx.fillRect(x - 5, y - 9, 10, 9);
-  ctx.fillStyle = '#8f8a80';
-  ctx.fillRect(x - 4, y - 8, 8, 7);
-  ctx.fillStyle = '#b5afa3';
-  ctx.fillRect(x - 4, y - 8, 2, 7);
-  ctx.fillStyle = '#5fb8f0';
-  ctx.fillRect(x - 4, y - 9, 8, 2);
-  ctx.fillStyle = '#dff4ff';
-  ctx.fillRect(x - 3, y - 9, 2, 1);
-  ctx.fillStyle = '#4b4f60';
-  ctx.fillRect(x - 5, y - 12, 1, 3);
-  ctx.fillRect(x + 4, y - 12, 1, 3);
-  ctx.fillRect(x - 4, y - 13, 8, 1);
+  drawWoodBucket(ctx, x, y);
 }
 
 /** Pilha de baldes (no lago) ou baldes nas mãos, com contador. */
@@ -259,7 +247,9 @@ function drawBuckets(ctx, x, y, count, scale, withTag) {
   ctx.scale(scale, scale);
   if (!withTag) {
     ctx.fillStyle = 'rgba(30, 20, 40, .25)';
-    ctx.fillRect(-18, -1, 36, 3);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 18, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
   for (let i = 0; i < count; i++) {
     const row = i < 3 ? 0 : 1;
@@ -271,23 +261,7 @@ function drawBuckets(ctx, x, y, count, scale, withTag) {
 }
 
 function drawValve(ctx, x, y, t) {
-  ctx.fillStyle = 'rgba(30, 20, 40, .3)';
-  ctx.fillRect(x - 8, y - 1, 16, 3);
-  ctx.fillStyle = '#5b5f73';
-  ctx.fillRect(x - 2, y - 14, 4, 14);
-  ctx.save();
-  ctx.translate(x, y - 16);
-  ctx.rotate(Math.sin(t) * 0.1);
-  ctx.strokeStyle = '#c2453b';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(0, 0, 6, 0, Math.PI * 2);
-  ctx.moveTo(-6, 0);
-  ctx.lineTo(6, 0);
-  ctx.moveTo(0, -6);
-  ctx.lineTo(0, 6);
-  ctx.stroke();
-  ctx.restore();
+  drawValveWheel(ctx, x, y, t);
   drawTag(ctx, x, y - 32, 'comporta');
 }
 

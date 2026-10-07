@@ -1,12 +1,13 @@
-/* NEXO — Tela de título: novo jogo, continuar, Modo Pesquisa e opções */
+/* NEXO — Tela de título do aluno: novo jogo, continuar, trocar de perfil, Modo Pesquisa e opções */
 
-import { qs } from '../core/dom.js';
-import { state, DEBUG, saveState, startNewGame, wipeAll, applySettings } from '../core/state.js';
+import { qs, escapeHtml } from '../core/dom.js';
+import { state, DEBUG, saveState, startNewGame, activeStudent, resetStudent, signOut } from '../core/state.js';
 import { getBaseLayer } from '../world/renderer.js';
 import { openJournal } from './journal.js';
 import { accessibilityMarkup, bindAccessibility, researchMarkup, bindResearch } from './options.js';
 import { showCreate } from './create-screen.js';
 import { showGame } from './game-screen.js';
+import { showProfiles, bindTeacherShortcut } from './profile-screen.js';
 
 let stopBackground = null;
 
@@ -45,6 +46,11 @@ export function stopVillageBackground() {
 }
 
 export function showTitle() {
+  const student = activeStudent();
+  if (!student) {
+    showProfiles();
+    return;
+  }
   const app = qs('#app');
   app.innerHTML = `
     <div class="screen">
@@ -56,9 +62,11 @@ export function showTitle() {
           <p class="logo__tagline">Uma Jornada Matemática</p>
         </header>
         <nav class="title-menu frame" aria-label="Menu principal">
+          <p class="title-menu__who">Aluno: <b>${escapeHtml(student.name)}</b></p>
           <button type="button" class="btn btn--crystal" data-role="new">Novo jogo</button>
           <button type="button" class="btn" data-role="continue" ${state.player ? '' : 'disabled'}>Continuar${state.player ? ` como ${state.player.name}` : ''}</button>
           <button type="button" class="btn btn--ghost" data-role="journal">Diário</button>
+          <button type="button" class="btn btn--ghost btn--small" data-role="switch">Trocar de perfil</button>
         </nav>
         <div class="title-panels">
           <details class="frame title-card" ${state.research.on ? 'open' : ''}>
@@ -70,7 +78,7 @@ export function showTitle() {
             <div class="stack" data-role="options">
               ${accessibilityMarkup()}
               <div class="row">
-                <button type="button" class="btn btn--ghost btn--small" data-role="wipe">Apagar tudo</button>
+                <button type="button" class="btn btn--ghost btn--small" data-role="wipe">Apagar meu progresso</button>
                 ${DEBUG ? '<button type="button" class="btn btn--ghost btn--small" data-role="debug">Debug: liberar regiões</button>' : ''}
               </div>
             </div>
@@ -83,6 +91,7 @@ export function showTitle() {
   animateVillageBackground(qs('.screen__bg', app));
   bindResearch(qs('[data-role="research"]', app));
   bindAccessibility(qs('[data-role="options"]', app));
+  bindTeacherShortcut();
 
   qs('[data-role="new"]', app).addEventListener('click', () => {
     if (state.player && !confirm('Começar um novo jogo? O progresso atual será apagado. Os registros de pesquisa são mantidos.')) return;
@@ -94,10 +103,13 @@ export function showTitle() {
     showGame();
   });
   qs('[data-role="journal"]', app).addEventListener('click', openJournal);
+  qs('[data-role="switch"]', app).addEventListener('click', () => {
+    signOut();
+    showProfiles();
+  });
   qs('[data-role="wipe"]', app).addEventListener('click', () => {
-    if (!confirm('Apagar progresso e registros deste navegador? Exporte os dados antes.')) return;
-    wipeAll();
-    applySettings();
+    if (!confirm(`Apagar todo o progresso de ${student.name}? Exporte os dados de pesquisa antes.`)) return;
+    resetStudent(student.id);
     showTitle();
   });
   qs('[data-role="debug"]', app)?.addEventListener('click', () => {

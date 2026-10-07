@@ -19,6 +19,7 @@ import { refreshHud } from '../ui/hud.js';
 import { showToast } from '../ui/toast.js';
 import { registerTable } from '../missions/widgets.js';
 import { isRegionDone, isRegionOpen, isMissionDone } from './progress.js';
+import { statStart, statAttempt, statHint, statWin, statAbandon } from './stats.js';
 
 const FAILS_BEFORE_SUPPORT = 3;
 
@@ -38,6 +39,7 @@ export function startMission(missionId) {
     supp: 0,
     calc: 0,
     done: false,
+    stage: null,
     cleanups: [],
     view: null,
   };
@@ -46,6 +48,7 @@ export function startMission(missionId) {
   logEvent(state.seen[region.id] ? 'region_return' : 'region_enter', { region: region.id });
   state.seen[region.id] = 1;
   logEvent('mission_start', { rep: Boolean(state.done[missionId]) });
+  statStart(missionId);
   saveState();
 
   const viewOptions = {
@@ -83,7 +86,10 @@ function createMissionApi(session) {
     record: (headers, rows, caption) => session.view.setNotebook(registerTable(headers, rows, caption)),
     log: (type, data) => active() && logEvent(type, data),
     /** Só nas missões de mundo: etapa atual e o que fazer agora (rastreador do HUD). */
-    setStage: (index) => session.view.setStage?.(index),
+    setStage: (index) => {
+      session.stage = index;
+      session.view.setStage?.(index);
+    },
     setObjective: (text) => session.view.setObjective?.(text),
     onCleanup: (callback) => session.cleanups.push(callback),
     isActive: active,
@@ -93,6 +99,7 @@ function createMissionApi(session) {
 function attempt(session, ok, data) {
   session.tries++;
   logEvent('attempt', { n: session.tries, ok, ...data });
+  statAttempt(session.id, Boolean(ok), session.stage);
   return ok;
 }
 
@@ -111,6 +118,7 @@ export function requestHint(automatic) {
   if (!session || session.done) return;
   session.hints = Math.min(session.hints + 1, 3);
   logEvent('hint_request', { level: session.hints, auto: Boolean(automatic) });
+  statHint(session.id, Boolean(automatic), session.stage);
   session.view.showHint(session.hints, MISSIONS[session.id].hints[session.hints - 1], automatic);
 }
 
@@ -131,6 +139,7 @@ function win(session, message) {
   }
   logEvent('success', { sup, tries: session.tries, hints: session.hints, sec, calc: session.calc });
   logEvent('mission_end', { sec });
+  statWin(session.id, sec);
   saveState();
 
   const nextInRegion = region.missions.find((id) => !isMissionDone(id)) ?? null;
@@ -157,9 +166,19 @@ function announceRegion(region) {
 export function leaveMission() {
   const session = runtime.session;
   if (!session) return;
-  if (!session.done) logEvent('mission_end', { abandon: true, tries: session.tries, hints: session.hints });
-  session.cleanups.forEach((cleanup) => cleanup());
+  if (!session.done) {
+    logEvent('mission_end', { abandon: true, tries: session.tries, hints: session.hints });
+    statAbandon(session.id, Math.round((Date.now() - session.t0) / 1000));
+  }
+  // A sessão sai primeiro: um erro numa limpeza nunca pode deixar a missão presa
   runtime.session = null;
+  for (const cleanup of session.cleanups) {
+    try {
+      cleanup();
+    } catch (error) {
+      console.error('Falha ao limpar a missão', error);
+    }
+  }
   session.view.close();
   refreshHud();
 }
