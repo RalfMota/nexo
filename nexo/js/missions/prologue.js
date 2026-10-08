@@ -1,172 +1,146 @@
-/* NEXO — Prólogo: A Ruptura (familiarização, sem conteúdo matemático)
- * Ensina os gestos do jogo: tocar em alguém, arrastar um objeto até um lugar, usar o Compasso.
+/* NEXO — Prólogo: A Ruptura (familiarização, sem conteúdo matemático), jogado no próprio mapa
+ *
+ * Ensina os gestos do jogo na praça, ao lado da Lyra:
+ *   1. andar até os dois artefatos que brotam no chão e pegá-los com E (vão para a bolsa);
+ *   2. ativar o Compasso (tecla Q ou o botão na barra de baixo) e examinar o cristal rachado;
+ *   3. voltar a falar com a Lyra (e saber que dá para pedir dica a qualquer momento).
+ *
+ * Eventos de pesquisa como na versão em janela: interaction { item: 'inventario' } e
+ * interaction { alvo: 'cristal', compasso }.
  */
 
-import { createPlayfield, centerOf } from './playfield.js';
-import { artArtifact } from './props-art.js';
-import { paintSky } from './widgets.js';
-import { drawCrystal, roundRect, circle } from '../art/shapes.js';
-import { drawCharacter } from '../art/characters.js';
+import { addQuestObject, clearQuestLayer, burst, playAction } from '../world/quest-layer.js';
+import { drawArtifact, drawUnstableCrystal } from '../art/prologue-art.js';
+import { tileFoot, drawTag, drawArrow } from './world-kit.js';
 import { CHARACTERS } from '../data/characters.js';
 import { state, saveState } from '../core/state.js';
 import { refreshHud } from '../ui/hud.js';
 import { showToast } from '../ui/toast.js';
 
-const LINES = [
-  'O Núcleo do Nexo se rompeu, e tudo na vila saiu do equilíbrio. Toque em mim quando estiver pronto.',
-  'Leve estes artefatos. Arraste cada um até a sua bolsa.',
-  'Agora ative o Compasso (tecla Q ou na barra de baixo) e toque no cristal que pulsa.',
-  'O cristal respondeu a você! Quando precisar, peça uma dica. Toque em mim para seguir viagem.',
+const ARTIFACTS = [
+  { kind: 'compass', name: 'Compasso de Nexo', at: tileFoot(25, 24) },
+  { kind: 'calculator', name: 'Calculador Arcano', at: tileFoot(27, 25) },
 ];
+const CRYSTAL = tileFoot(34, 23);
+const LYRA = tileFoot(CHARACTERS.lyra.tile.x, CHARACTERS.lyra.tile.y);
 
-const BAG = { x: 760, y: 320, w: 170, h: 170 };
-const LYRA = { x: 110, y: 200, w: 170, h: 260 };
-const CRYSTAL = { x: 400, y: 110, w: 160, h: 230 };
+const compassOn = () => document.body.classList.contains('compass');
 
-function mountPrologue(stage, api) {
+function mountPrologueWorld(api) {
   let step = 0;
-  let stored = 0;
-  let touched = false;
+  let healed = false;
+  const picked = new Set(ARTIFACTS.filter((item) => state.inv.includes(item.name)).map((item) => item.kind));
 
-  const field = createPlayfield(stage, {
-    draw(ctx, t) {
-      paintSky(ctx, 960, 540, '#241d48', '#4b3a7a');
-      for (let i = 0; i < 60; i++) {
-        ctx.fillStyle = `rgba(190, 255, 245, ${0.25 + (i % 4) * 0.15})`;
-        ctx.fillRect((i * 97) % 960, 540 - ((i * 53 + t * 14 * (1 + (i % 3))) % 540), 2, 2);
-      }
-      ctx.fillStyle = '#2f5a36';
-      ctx.fillRect(0, 450, 960, 90);
-      ctx.fillStyle = '#3a2f5e';
-      ctx.beginPath();
-      ctx.ellipse(480, 420, 170, 30, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Lyra
-      ctx.save();
-      ctx.translate(195, 455);
-      ctx.scale(6, 6);
-      drawCharacter(ctx, 0, 0, CHARACTERS.lyra.look, { dir: 'right' });
-      ctx.restore();
-      if (step === 0 || step === 3) {
-        ctx.fillStyle = '#fbf1d9';
-        roundRect(ctx, 210, 150 + Math.sin(t * 4) * 3, 60, 34, 10);
-        ctx.fill();
-        for (let i = 0; i < 3; i++) circle(ctx, 226 + i * 14, 167 + Math.sin(t * 4) * 3, 4, '#4f3019');
-      }
-
-      // Cristal instável
-      const calling = step === 2;
-      const pulse = calling ? 1 + Math.sin(t * 6) * 0.1 : 1;
-      if (calling) {
-        ctx.strokeStyle = `rgba(255, 207, 107, ${0.5 + Math.sin(t * 6) * 0.4})`;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(480, 230, 100 + Math.sin(t * 6) * 8, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      drawCrystal(ctx, 480, 230 + Math.sin(t * 2) * 6, 80 * pulse, {
-        glow: touched ? 1.6 : 0.7 + Math.sin(t * 9) * 0.3,
-        color: touched ? '#7ff0e0' : '#9a7ff0',
-      });
-      if (!touched) {
-        ctx.strokeStyle = 'rgba(40, 20, 70, .85)';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(468, 160);
-        ctx.lineTo(492, 205);
-        ctx.lineTo(472, 245);
-        ctx.lineTo(490, 280);
-        ctx.stroke();
-      }
-
-      // Bolsa do jogador
-      ctx.fillStyle = '#8a5a33';
-      roundRect(ctx, BAG.x + 10, BAG.y + 40, BAG.w - 20, BAG.h - 50, 30);
-      ctx.fill();
-      ctx.fillStyle = '#6b4226';
-      roundRect(ctx, BAG.x + 10, BAG.y + 40, BAG.w - 20, 50, [30, 30, 8, 8]);
-      ctx.fill();
-      ctx.strokeStyle = '#6b4226';
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.arc(BAG.x + BAG.w / 2, BAG.y + 44, 50, Math.PI, 0);
-      ctx.stroke();
-      circle(ctx, BAG.x + BAG.w / 2, BAG.y + 92, 8, '#f2b84b');
-      for (let i = 0; i < stored; i++) circle(ctx, BAG.x + 60 + i * 50, BAG.y + 130, 14, i ? '#3b3b5c' : '#c9862a');
-    },
-  }, api);
-
-  const lyra = field.addToken({
-    ...LYRA, mode: 'button', label: 'Falar com Lyra', className: 'act',
-    onTap: () => {
-      if (step === 0) goTo(1);
-      else if (step === 3) {
-        api.attempt(true, {});
-        api.win('Prólogo concluído. A ruptura a oeste se fechou: procure Tainá no Vale dos Recursos.');
-      }
-    },
-  });
-
-  const bag = field.addZone({ ...BAG, label: 'Sua bolsa', accepts: (token) => token.data.artifact });
-
-  function spawnArtifacts() {
-    ['compass', 'calculator'].forEach((kind, index) => {
-      field.addToken({
-        x: 420 + index * 90, y: 390, w: 76, h: 76, mode: 'item', className: 'act',
-        label: kind === 'compass' ? 'Compasso de Nexo' : 'Calculador Arcano',
-        art: artArtifact(kind),
-        data: { artifact: kind },
-        onDrop: (zone, token) => {
-          if (zone !== bag) return false;
-          field.fly(artArtifact(kind), centerOf(token), centerOf(BAG));
-          token.remove();
-          stored++;
-          if (stored === 2) {
-            giveArtifacts();
-            goTo(2);
-          }
-          return true;
-        },
-      });
+  ARTIFACTS.forEach((item) => {
+    addQuestObject({
+      id: `artefato-${item.kind}`,
+      x: item.at.x,
+      y: item.at.y,
+      reach: 30,
+      label: `Pegar ${item.name}`,
+      visible: () => !picked.has(item.kind),
+      enabled: () => !picked.has(item.kind),
+      draw: (ctx, t) => {
+        drawArtifact(ctx, item.kind, item.at.x, item.at.y, t);
+        drawTag(ctx, item.at.x, item.at.y - 30, item.name);
+        if (step === 0) drawArrow(ctx, item.at.x, item.at.y - 44, t);
+      },
+      onInteract: () => pick(item),
     });
-  }
-
-  const crystal = field.addToken({
-    ...CRYSTAL, mode: 'button', label: 'Cristal instável', className: 'act',
-    onTap: () => {
-      if (step !== 2) return;
-      touched = true;
-      api.log('interaction', { alvo: 'cristal', compasso: document.body.classList.contains('compass') });
-      goTo(3);
-    },
   });
 
-  function giveArtifacts() {
-    if (state.inv.length) return;
-    state.inv = ['Compasso de Nexo', 'Calculador Arcano'];
+  addQuestObject({
+    id: 'cristal-instavel',
+    x: CRYSTAL.x,
+    y: CRYSTAL.y,
+    reach: 34,
+    label: 'Cristal instável',
+    visible: () => step >= 1,
+    draw: (ctx, t) => {
+      drawUnstableCrystal(ctx, CRYSTAL.x, CRYSTAL.y, t, healed);
+      if (step === 1) {
+        drawTag(ctx, CRYSTAL.x, CRYSTAL.y - 62, compassOn() ? 'aperte E no cristal' : 'ative o Compasso: tecla Q', compassOn() ? { fill: '#c8f5c0' } : undefined);
+        drawArrow(ctx, CRYSTAL.x, CRYSTAL.y - 76, t);
+      }
+    },
+    onInteract: examineCrystal,
+  });
+
+  // Seta sobre a Lyra na última etapa
+  addQuestObject({
+    id: 'seta-lyra',
+    x: 0,
+    y: 0,
+    reach: 0,
+    label: 'Lyra',
+    enabled: () => false,
+    draw: (ctx, t) => {
+      if (step !== 2) return;
+      drawTag(ctx, LYRA.x, LYRA.y - 62, 'fale com a Lyra (E)');
+      drawArrow(ctx, LYRA.x, LYRA.y - 76, t);
+    },
+    onInteract: () => {},
+  });
+
+  function pick(item) {
+    if (picked.has(item.kind)) return;
+    picked.add(item.kind);
+    playAction('crouch');
+    burst(item.at.x, item.at.y - 10, 'sparkle', 12);
+    if (!state.inv.includes(item.name)) state.inv.push(item.name);
     saveState();
     refreshHud();
+    if (picked.size < ARTIFACTS.length) {
+      api.say(`${item.name} foi para a sua bolsa. Falta pegar o outro artefato.`, 'ok');
+      return;
+    }
     api.log('interaction', { item: 'inventario' });
     showToast('Artefatos recebidos:', 'Compasso de Nexo e Calculador Arcano.');
+    goTo(1);
+  }
+
+  function examineCrystal() {
+    if (step !== 1) {
+      if (healed) api.say('O cristal pulsa calmo agora. Volte a falar com a Lyra.', 'ok');
+      return;
+    }
+    api.log('interaction', { alvo: 'cristal', compasso: compassOn() });
+    if (!compassOn()) {
+      api.say('O cristal treme, mas você não consegue ver de onde vem a energia. Ative o Compasso (tecla Q ou o botão "Compasso" na barra de baixo) e tente de novo.', 'warn');
+      return;
+    }
+    healed = true;
+    playAction('use');
+    burst(CRYSTAL.x, CRYSTAL.y - 26, 'success', 22);
+    goTo(2);
   }
 
   function goTo(next) {
     step = next;
-    api.say(LINES[step]);
-    lyra.el.disabled = !(step === 0 || step === 3);
-    crystal.el.disabled = step !== 2;
-    if (step === 1) {
-      if (state.inv.length) {
-        stored = 2;
-        goTo(2);
-        return;
-      }
-      spawnArtifacts();
+    api.setStage(step);
+    if (step === 0) {
+      api.setObjective('Ande até os dois artefatos brilhando no chão da praça e aperte E (ou toque) em cada um para guardar na bolsa.');
+      api.say('Leve estes artefatos: estão no chão, perto de mim. Ande até cada um e aperte E para guardar na bolsa.');
+    } else if (step === 1) {
+      api.setObjective('Ative o Compasso (tecla Q ou o botão na barra de baixo) e aperte E no cristal rachado ao lado do Núcleo.');
+      api.say('Agora ative o Compasso: ele mostra o que pode ser tocado. Depois examine o cristal rachado, à direita do Núcleo.');
+    } else {
+      api.setObjective('Volte e fale com a Lyra (aperte E perto dela).');
+      api.say('O cristal respondeu a você! Quando precisar, use o botão "Pedir dica". Venha falar comigo para seguir viagem.', 'ok');
     }
   }
 
-  goTo(0);
+  api.onTalk(() => {
+    if (step < 2) {
+      api.say(step === 0 ? 'Primeiro pegue os dois artefatos que brilham no chão.' : 'Ative o Compasso (Q) e examine o cristal rachado ao lado do Núcleo.');
+      return;
+    }
+    api.attempt(true, {});
+    api.win('Prólogo concluído. A ruptura a oeste se fechou: procure Tainá no Vale dos Recursos.');
+  });
+
+  api.onCleanup(clearQuestLayer);
+  goTo(picked.size === ARTIFACTS.length ? 1 : 0);
 }
 
 export default {
@@ -174,18 +148,20 @@ export default {
     title: 'A Ruptura',
     region: 'p',
     npc: 'lyra',
-    greeting: LINES[0],
+    mode: 'world',
+    stages: ['Artefatos', 'Compasso e cristal', 'Falar com a Lyra'],
+    greeting: 'O Núcleo do Nexo se rompeu, e tudo na vila saiu do equilíbrio. Vou mostrar como as coisas funcionam por aqui.',
     context: 'Uma falha de energia atingiu o Nexo e rompeu os caminhos entre as regiões.',
-    goal: 'Aprender a se mover, tocar, arrastar objetos, pedir dica e usar o mapa.',
+    goal: 'Aprender a se mover, pegar objetos, usar o Compasso, pedir dica e conversar.',
     concept: 'Familiarização com a interface (sem conteúdo matemático)',
     prerequisites: '—',
     relation: '—',
     categories: [],
     hints: [
-      'Toque na Lyra para ouvir o que ela tem a dizer.',
-      'Segure um artefato e solte em cima da bolsa. Também dá para tocar no artefato e depois na bolsa.',
-      'Ative o Compasso (tecla Q) e toque no cristal grande que pulsa no meio da cena.',
+      'Use as setas ou W A S D para andar. Chegue perto de um artefato brilhando e aperte E (ou toque nele).',
+      'O Compasso liga e desliga com a tecla Q ou com o botão "Compasso" na barra de baixo.',
+      'O cristal rachado fica à direita do Núcleo, no meio da praça. Com o Compasso ligado, chegue perto dele e aperte E.',
     ],
-    mount: mountPrologue,
+    mountWorld: mountPrologueWorld,
   },
 };

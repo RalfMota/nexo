@@ -47,7 +47,7 @@ As músicas ficam na pasta `audio/` e tocam em sequência, na ordem da lista `TR
 
 ## Como as missões funcionam
 
-Todas as missões de Matemática acontecem **no próprio mapa** (a Grade de Energia, por dentro da Torre; o Caldeirão de Orin, no laboratório de poções), sem janela: os objetos aparecem perto do personagem da região, o jogador anda até eles e aperta **E** (ou toca) para pegar, levar, plantar, puxar alavancas e girar mostradores. Um rastreador no HUD mostra a etapa, a fala do personagem, as dicas e o Registro técnico. Só o Prólogo (aprender a usar o jogo) ainda é uma cena em janela.
+Todas as missões, inclusive o Prólogo, acontecem **no próprio mapa** (a Grade de Energia, por dentro da Torre; o Caldeirão de Orin, no laboratório de poções), sem janela: os objetos aparecem perto do personagem da região, o jogador anda até eles e aperta **E** (ou toca) para pegar, levar, plantar, puxar alavancas e girar mostradores. Um rastreador no HUD mostra a etapa, a fala do personagem, as dicas e o Registro técnico. No Prólogo, na praça, o jogador pega os dois artefatos que brotam no chão, liga o Compasso (Q) para examinar o cristal rachado ao lado do Núcleo e volta a falar com a Lyra.
 
 - **Pegar e levar:** pilhas, cestos e estantes entregam uma unidade por toque; segurar E pega várias. Com as mãos vazias, dá para tirar de volta o que foi colocado.
 - **Alavancas, manivelas e corneta:** disparam o que foi montado (abrir a comporta, rodar a máquina, mandar as caravanas, assentar lajotas).
@@ -129,7 +129,7 @@ js/
   game/               progresso (regiões abertas), sessão de missão (tentativas, dicas, conclusão),
                       estatísticas por missão/etapa e avaliação por tópico (Painel do Professor)
   missions/           um arquivo por região (*-world.js: missões no mapa) + world-kit.js
-                      (alavancas, mostradores, etiquetas); prologue.js + playfield.js (cena em janela)
+                      (alavancas, mostradores, etiquetas); prologue.js (Prólogo na praça)
   engine/             motor Phaser: cenas Mundo e Interior, jogador, efeitos (ver "Motor do jogo")
   world/              mapa, camadas de desenho, entrada (teclado/toque), história (falas), moradores, clima
   art/                desenho em pixel art: terreno, construções, personagens

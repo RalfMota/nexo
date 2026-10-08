@@ -92,6 +92,10 @@ function createMissionApi(session) {
     },
     setObjective: (text) => session.view.setObjective?.(text),
     onCleanup: (callback) => session.cleanups.push(callback),
+    /** Só nas missões de mundo: o que acontece ao falar com o personagem da missão (padrão: repetir a fala). */
+    onTalk: (callback) => {
+      session.talk = callback;
+    },
     isActive: active,
   };
 }
