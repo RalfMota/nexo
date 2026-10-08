@@ -88,10 +88,13 @@ test('Previsão (Oficina): três testes e duas previsões certas', async ({ page
     await useObject(page, 'test-lever');
   }
   await wait(page, 1200);
-  // Bilhetes do Kael: 9 e 14 células → 22 e 32 (saída = 2 × energia + 4)
-  await useObject(page, 'prediction-up', 22);
+  // Bilhetes do Kael: 9, 14 e 6 células → 22, 32 e 16 (saída = 2 × energia + 4)
+  await useObject(page, 'mark-up', 20); // marca baixa: transborda
   await useObject(page, 'launch-lever');
-  await useObject(page, 'prediction-up', 10);
+  expect(await missionDone(page, 'r3d')).toBe(false);
+  await useObject(page, 'mark-up', 12); // 32
+  await useObject(page, 'launch-lever');
+  await useObject(page, 'mark-down', 16); // 16
   await useObject(page, 'launch-lever');
   expect(await missionDone(page, 'r3d')).toBe(true);
   expect(errors).toEqual([]);

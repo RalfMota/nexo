@@ -3,14 +3,15 @@
  * r3a Máquina de Produção (cristais = 3 × ciclos): o jogador gira a manivela da máquina,
  *   pega o carrinho e leva até a ponte de carga, que pede exatamente 24 cristais.
  * r3d Previsão (saída = 2 × energia + 4): leva células da estante ao conversor e faz até
- *   3 testes; depois gira o mostrador com a previsão e puxa a alavanca para conferir.
+ *   3 testes; depois põe a marca da previsão no próprio tubo de saída e liga: a energia
+ *   transborda acima da marca, para abaixo dela ou estabiliza exatamente nela.
  *
  * Os eventos registrados para a pesquisa são os mesmos da versão em janela.
  */
 
 import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
 import { drawCrankMachine, drawMineCart, drawCargoBridge, drawConverter, drawOutputTube, drawCellRack, drawEnergyCells } from '../art/mission-props.js';
-import { tileFoot, drawTag, drawArrow, addLever, addDial } from './world-kit.js';
+import { tileFoot, drawTag, drawArrow, addLever } from './world-kit.js';
 import { createHands } from './kit/hands.js';
 import { prefersCalm } from '../core/state.js';
 
@@ -173,7 +174,6 @@ const CONVERTER = tileFoot(36, 7);
 const TUBE = { x: CONVERTER.x + 36, y: CONVERTER.y - 2 };
 const TEST_LEVER = tileFoot(38, 7);
 const RACK = tileFoot(34, 10);
-const DIAL = { x: 37 * 32 + 16, y: 10 * 32 + 26 };
 const LAUNCH_LEVER = tileFoot(33, 10);
 const TUBE_MAX = 44;
 
@@ -235,7 +235,15 @@ function mountPredictionWorld(api) {
       clock = t;
       output += (outputTarget - output) * Math.min(1, (1 / 60) * 3);
       drawConverter(ctx, CONVERTER.x, CONVERTER.y, t, t < activeUntil);
-      drawOutputTube(ctx, TUBE.x, TUBE.y, output, TUBE_MAX, predicted);
+      drawOutputTube(ctx, TUBE.x, TUBE.y, output, TUBE_MAX, stage === 1 && predicted == null ? mark : predicted);
+      if (outcome && t < outcome.until) {
+        drawTag(ctx, TUBE.x + 4, TUBE.y - 106, outcome.text, outcome.good ? { fill: '#c8f5c0' } : { fill: '#ffd0c8' });
+        // Transbordando: gotas escorrendo pela boca do tubo
+        if (outcome.over && Math.round(output) >= outcome.real - 1) {
+          ctx.fillStyle = '#7ff0e0';
+          for (let i = 0; i < 4; i++) ctx.fillRect(TUBE.x - 8 + ((i * 5 + Math.floor(t * 20)) % 16), TUBE.y - 66 + ((t * 40 + i * 9) % 40), 2, 3);
+        }
+      }
       drawTag(ctx, CONVERTER.x - 26, CONVERTER.y - 38, `entrada: ${loaded}`, { fill: '#1d1a38', ink: '#7ff0e0' });
       drawTag(ctx, TUBE.x + 4, TUBE.y - 78, `saída: ${Math.round(output)}`, { fill: '#1d1a38', ink: '#7ff0e0' });
       if (stage === 1) drawTag(ctx, CONVERTER.x - 6, CONVERTER.y - 92, `bilhete do Kael: ${kaelEnergy()} células`, { fill: '#fff6dc' });
@@ -265,12 +273,47 @@ function mountPredictionWorld(api) {
     onPull: runTest,
   });
 
-  const dial = addDial({ id: 'prediction', ...DIAL, label: 'Previsão da saída', max: 60, visible: () => stage === 1, caption: 'sua previsão' });
+  /* Marca da previsão no tubo de saída: o aluno a sobe ou desce antes de ligar */
+  let mark = 0;
+  let outcome = null; // { text, good, until }: o que aconteceu no tubo na última previsão
+  const moveMark = (delta) => {
+    mark = Math.max(0, Math.min(TUBE_MAX, mark + delta));
+    outcome = null;
+    predicted = null;
+    output = 0;
+    outputTarget = 0;
+  };
+  for (const [id, delta, dx, label] of [['mark-down', -1, -15, 'Baixar a marca do tubo'], ['mark-up', 1, 15, 'Subir a marca do tubo']]) {
+    addQuestObject({
+      id,
+      x: TUBE.x + dx,
+      y: TUBE.y + 14,
+      reach: 16,
+      label,
+      visible: () => stage === 1,
+      enabled: () => stage === 1,
+      draw: (ctx) => {
+        const x = TUBE.x + dx;
+        const y = TUBE.y + 10;
+        ctx.fillStyle = '#4f3019';
+        ctx.fillRect(x - 6, y - 6, 12, 11);
+        ctx.fillStyle = '#c99a5b';
+        ctx.fillRect(x - 5, y - 5, 10, 9);
+        ctx.fillStyle = '#2b1d14';
+        for (let i = 0; i < 3; i++) {
+          const row = delta > 0 ? y - 3 + i : y + 1 - i;
+          ctx.fillRect(x - i, row, i * 2 + 1, 1);
+        }
+        if (delta > 0) drawTag(ctx, TUBE.x, TUBE.y + 24, `sua marca: ${mark}`, { fill: '#fff6dc' });
+      },
+      onInteract: () => moveMark(delta),
+    });
+  }
 
   addLever({
     id: 'launch-lever',
     ...LAUNCH_LEVER,
-    label: 'Ligar com a previsão do mostrador',
+    label: 'Ligar com a marca do tubo',
     visible: () => stage === 1,
     onPull: confirmPrediction,
   });
@@ -297,13 +340,13 @@ function mountPredictionWorld(api) {
       if (!api.isActive()) return;
       stage = 1;
       api.setStage(1);
-      api.setObjective('Leia o bilhete do Kael, gire o mostrador com a sua previsão e puxe a alavanca vermelha.');
-      api.say(`Os testes acabaram. Agora diga antes: quanto vai sair com ${kaelEnergy()} células? Gire o mostrador e puxe a alavanca vermelha.`);
+      api.setObjective('Leia o bilhete do Kael, ponha a marca do tubo de saída onde você acha que a energia vai parar e puxe a alavanca vermelha.');
+      api.say(`Os testes acabaram. Agora diga antes: até onde a energia vai subir no tubo com ${kaelEnergy()} células? Use as setas ao lado do tubo para pôr a marca e puxe a alavanca vermelha. Se a marca ficar baixa, transborda!`);
     }, prefersCalm() ? 0 : 900);
   }
 
   function confirmPrediction() {
-    const guess = dial.get();
+    const guess = mark;
     const e = kaelEnergy();
     const real = convert(e);
     const good = api.attempt(guess === real, { energia: e, previsao: guess, real });
@@ -313,6 +356,13 @@ function mountPredictionWorld(api) {
     output = 0;
     outputTarget = real;
     activeUntil = clock + 1;
+    outcome = {
+      good,
+      real,
+      over: real > guess,
+      until: clock + 3,
+      text: good ? `parou na marca: ${real}` : real > guess ? `transbordou: ${real - guess} acima da marca` : `parou ${guess - real} abaixo da marca`,
+    };
     itemIndex++;
     if (good) correct++;
 
@@ -328,9 +378,9 @@ function mountPredictionWorld(api) {
       setIndex = (setIndex + 1) % PREDICTION_SETS.length;
       api.fail('As previsões ainda não bateram. Kael trouxe novas energias; observe o Registro.');
     } else if (good) {
-      api.say(`A previsão coincidiu: saiu ${real}. Mais uma! Próximo bilhete: ${kaelEnergy()} células.`, 'ok');
+      api.say(`A energia parou exatamente na sua marca: ${real}. Mais uma! Próximo bilhete: ${kaelEnergy()} células.`, 'ok');
     } else {
-      api.fail(`Saiu ${real}, e você previu ${guess}: o conversor oscilou. O valor real entrou no Registro. Próximo bilhete: ${kaelEnergy()} células.`);
+      api.fail(`Saiu ${real}, e a sua marca estava em ${guess}: ${real > guess ? 'a energia passou da marca e transbordou' : 'a energia parou abaixo da marca'}. O valor real entrou no Registro. Próximo bilhete: ${kaelEnergy()} células.`);
     }
   }
 
@@ -367,7 +417,7 @@ export default {
     npc: 'kael',
     mode: 'world',
     stages: ['Testar', 'Prever'],
-    greeting: 'Você tem três testes com as células da estante. Depois, gire o mostrador e diga quanto vai sair antes de eu ligar.',
+    greeting: 'Você tem três testes com as células da estante. Depois, marque no tubo até onde a energia vai subir, antes de eu ligar.',
     context: 'O Conversor de Energia transforma energia de entrada em saída útil. Antes de cada acionamento, Kael exige que você diga o que vai acontecer.',
     goal: 'Usar até 3 testes para entender o conversor e depois prever a saída para energias novas.',
     concept: 'Dependência entre grandezas, previsão e valor inicial fixo',
@@ -377,7 +427,7 @@ export default {
     hints: [
       'Faça testes com quantidades diferentes de células e compare as saídas no Registro. Dá até para testar sem nenhuma célula.',
       'Observe quanto a saída cresce a cada célula a mais, e o que sai com 0 células.',
-      'A saída cresce sempre o mesmo tanto por célula, a partir de um valor inicial. Use isso para a energia do bilhete. Segure E nas setas do mostrador para girar mais rápido.',
+      'A saída cresce sempre o mesmo tanto por célula, a partir de um valor inicial. Use isso para a energia do bilhete. Segure E nas setas do tubo para mover a marca mais rápido.',
     ],
     mountWorld: mountPredictionWorld,
   },
