@@ -11,6 +11,8 @@ O jogo usa módulos JavaScript (`import`/`export`), que o navegador bloqueia qua
 
 As fontes vêm do Google Fonts. Sem internet, o jogo funciona com fontes do sistema.
 
+**Versão publicada (empacotada):** `npm install` uma vez e depois `npm run build` gera a pasta `dist/` com o Vite (`vite.config.js`): os ~90 módulos viram um arquivo só, minificado, e cada arquivo leva um resumo (hash) no nome. Assim o navegador nunca fica com uma versão velha depois de um deploy (não é mais preciso Ctrl+F5) e os arquivos podem ficar em cache por um ano (`vercel.json`). O Phaser vai num arquivo separado, que quase nunca muda. `npm run preview` abre a versão empacotada em `http://localhost:5512`. A Vercel roda o build sozinha a cada deploy. Para desenvolver, continua valendo o servidor local simples acima, sem build.
+
 ## Trilha sonora
 
 As músicas ficam na pasta `audio/` e tocam em sequência, na ordem da lista `TRACKS` em `js/core/music.js`; ao fim da lista, recomeçam. Na troca de faixa há um crossfade de 4 segundos (a que termina some enquanto a próxima entra em fade-in). Para incluir, tirar ou reordenar faixas, edite a lista `TRACKS` (MP3, MP4 ou OGG). Uma faixa que não carregar é pulada. Os navegadores só permitem som depois de um gesto do jogador, por isso a trilha começa no primeiro clique, toque ou tecla. Ela pausa quando a aba fica escondida. Em **Opções** (tela de título ou pausa) dá para desligar a música e ajustar o volume; a escolha fica salva.

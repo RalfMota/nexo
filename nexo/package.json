@@ -7,6 +7,12 @@
     "@vercel/blob": "^2.8.1"
   },
   "scripts": {
+    "dev": "vite --port 5511",
+    "build": "vite build",
+    "preview": "vite preview --port 5512",
     "test": "node --test --experimental-test-module-mocks tests/*.test.js"
+  },
+  "devDependencies": {
+    "vite": "^7.3.7"
   }
 }
