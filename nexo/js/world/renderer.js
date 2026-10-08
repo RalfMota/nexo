@@ -15,7 +15,7 @@ import {
 } from '../art/structures.js';
 import { outlinedText } from '../art/shapes.js';
 import { drawQuestObjects, drawCarried, drawEffects, isAnchored } from './quest-layer.js';
-import { drawGrass, drawWater, drawLeaves, drawLight, updateScenery, wind } from './scenery.js';
+import { drawGrass, drawWater, drawLeaves, drawLight, drawWarmLight, updateScenery, wind } from './scenery.js';
 import { TREE_VARIANTS } from '../art/trees.js';
 import { weatherNow, drawSplashes, drawWeatherScreen } from './weather.js';
 import { hash } from '../art/shapes.js';
@@ -142,11 +142,32 @@ export function drawOverlayLayer(ctx, frame, screen) {
   drawScreenEffects(ctx, screen.width, screen.height, t, progress.gloom);
 }
 
-/** Luz do sol, clima, penumbra das regiões desligadas e vinheta. */
-export function drawScreenEffects(ctx, width, height, t, gloom = 0) {
-  const weather = weatherNow();
-  drawLight(ctx, width, height, t, weather.sun);
-  drawWeatherScreen(ctx, width, height, t);
+/**
+ * Partes fixas dos efeitos de tela (calor do sol; penumbra e vinheta), desenhadas uma vez num
+ * canvas do tamanho da tela e só refeitas quando o tamanho, o sol ou a penumbra mudam. Antes,
+ * os gradientes eram recriados e pintados na tela inteira a cada quadro.
+ */
+const screenCache = { warm: null, shade: null, warmKey: '', shadeKey: '' };
+
+function cachedScreen(slot, key, width, height, paint) {
+  let canvas = screenCache[slot];
+  if (!canvas || canvas.width !== width || canvas.height !== height) {
+    canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    screenCache[slot] = canvas;
+    screenCache[`${slot}Key`] = '';
+  }
+  if (screenCache[`${slot}Key`] !== key) {
+    const c = canvas.getContext('2d');
+    c.clearRect(0, 0, width, height);
+    paint(c);
+    screenCache[`${slot}Key`] = key;
+  }
+  return canvas;
+}
+
+function paintShade(ctx, width, height, gloom) {
   if (gloom > 0) {
     ctx.fillStyle = `rgba(60, 36, 110, ${gloom})`;
     ctx.fillRect(0, 0, width, height);
@@ -156,6 +177,18 @@ export function drawScreenEffects(ctx, width, height, t, gloom = 0) {
   vignette.addColorStop(1, 'rgba(10, 8, 30, .38)');
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
+}
+
+/** Luz do sol, clima, penumbra das regiões desligadas e vinheta. */
+export function drawScreenEffects(ctx, width, height, t, gloom = 0) {
+  const weather = weatherNow();
+  // O sol e a penumbra mudam devagar: arredondar evita refazer o cache a cada quadro
+  const sun = Math.round(weather.sun * 50) / 50;
+  const shade = Math.round(gloom * 200) / 200;
+  ctx.drawImage(cachedScreen('warm', `${width}x${height}|${sun}`, width, height, (c) => drawWarmLight(c, width, height, sun)), 0, 0);
+  drawLight(ctx, width, height, t, weather.sun, { warm: false });
+  drawWeatherScreen(ctx, width, height, t);
+  ctx.drawImage(cachedScreen('shade', `${width}x${height}|${shade}`, width, height, (c) => paintShade(c, width, height, shade)), 0, 0);
 }
 
 export function drawAlert(ctx, x, y) {

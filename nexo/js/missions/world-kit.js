@@ -13,9 +13,23 @@ export const TILE = 32;
 export const tileFoot = (tx, ty) => ({ x: tx * TILE + 16, y: ty * TILE + 28 });
 
 /** Etiqueta com texto curto, sempre legível sobre o mapa. */
+/** Largura dos textos das etiquetas: medir texto é caro e as etiquetas se repetem a cada quadro. */
+const tagWidths = new Map();
+
+function tagWidth(ctx, text) {
+  let width = tagWidths.get(text);
+  if (width === undefined) {
+    if (tagWidths.size > 2000) tagWidths.clear();
+    width = Math.ceil(ctx.measureText(text).width) + 8;
+    // Só guarda depois que a fonte do jogo carregou (antes, a medida é a da fonte reserva)
+    if (!document.fonts || document.fonts.check('700 8px "Fredoka"')) tagWidths.set(text, width);
+  }
+  return width;
+}
+
 export function drawTag(ctx, x, y, text, { fill = '#fbf3df', ink = '#2b1d14' } = {}) {
   ctx.font = '700 8px "Fredoka", sans-serif';
-  const width = Math.ceil(ctx.measureText(text).width) + 8;
+  const width = tagWidth(ctx, text);
   const left = Math.round(x - width / 2);
   const top = Math.round(y - 6);
   ctx.fillStyle = '#4f3019';

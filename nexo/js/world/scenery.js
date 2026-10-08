@@ -193,13 +193,18 @@ export function updateScenery(dt, t, view) {
 
 /* ---------- Luz (coordenadas da tela) ---------- */
 
-export function drawLight(ctx, width, height, t, sun = 1) {
-  // Calor no alto da tela, como sol de fim de tarde
+/** Calor no alto da tela, como sol de fim de tarde (parte fixa da luz). */
+export function drawWarmLight(ctx, width, height, sun = 1) {
   const warm = ctx.createLinearGradient(0, 0, 0, height);
   warm.addColorStop(0, `rgba(255, 214, 140, ${0.1 * sun})`);
   warm.addColorStop(0.5, 'rgba(255, 214, 140, 0)');
   ctx.fillStyle = warm;
   ctx.fillRect(0, 0, width, height);
+}
+
+/** Luz do sol: o calor fixo (opcional, quando não vem de um cache) e os raios que passeiam. */
+export function drawLight(ctx, width, height, t, sun = 1, { warm = true } = {}) {
+  if (warm) drawWarmLight(ctx, width, height, sun);
   if (prefersCalm() || sun < 0.05) return;
 
   // Raios de sol diagonais que passeiam devagar
