@@ -4,6 +4,7 @@
  * é um ponto de interação próprio; segurar E faz o número girar depressa.
  */
 
+import { playSfx } from '../core/sfx.js';
 import { addQuestObject, removeQuestObject, playAction, burst } from '../world/quest-layer.js';
 import { drawLever, drawDialPanel } from '../art/mission-props.js';
 
@@ -28,11 +29,16 @@ function tagWidth(ctx, text) {
 }
 
 export function drawTag(ctx, x, y, text, { fill = '#fbf3df', ink = '#2b1d14' } = {}) {
+  // Alto contraste: toda etiqueta fica branca com texto preto, seja qual for a cor da missão
+  if (document.body.classList.contains('contrast')) {
+    fill = '#ffffff';
+    ink = '#000000';
+  }
   ctx.font = '700 8px "Fredoka", sans-serif';
   const width = tagWidth(ctx, text);
   const left = Math.round(x - width / 2);
   const top = Math.round(y - 6);
-  ctx.fillStyle = '#4f3019';
+  ctx.fillStyle = document.body.classList.contains('contrast') ? '#000000' : '#4f3019';
   ctx.fillRect(left - 1, top - 1, width + 2, 12);
   ctx.fillStyle = fill;
   ctx.fillRect(left, top, width, 10);
@@ -80,7 +86,8 @@ export function addLever({ id, x, y, label, color = '#c2453b', onPull, enabled, 
     },
     onInteract: () => {
       pulledUntil = clock + 0.35;
-      playAction('use');
+      playSfx('alavanca');
+      playAction('use', { silent: true });
       onPull();
     },
   });

@@ -1,4 +1,6 @@
-/* NEXO — Entrada do jogador no mundo: teclado, toque (direcional) e clique para andar */
+/* NEXO — Entrada do jogador no mundo: teclado, toque (direcional), clique para andar e
+ * controle de videogame (direcional ou alavanca esquerda para andar; botão A ou X para interagir),
+ * o que também serve a controles adaptados de acessibilidade. */
 
 import { isTypingTarget } from '../core/dom.js';
 
@@ -11,6 +13,24 @@ const MOVE_KEYS = {
 const INTERACT_KEYS = ['e', ' ', 'enter'];
 
 const pressed = new Set();
+const DEAD_ZONE = 0.4;
+const GAMEPAD_INTERACT = [0, 2]; // A e X (no padrão do navegador)
+
+/** Direção do primeiro controle de videogame conectado: alavanca esquerda ou direcional. */
+function gamepadVector() {
+  const pads = navigator.getGamepads?.() ?? [];
+  for (const pad of pads) {
+    if (!pad) continue;
+    let dx = Math.abs(pad.axes[0] ?? 0) > DEAD_ZONE ? Math.sign(pad.axes[0]) : 0;
+    let dy = Math.abs(pad.axes[1] ?? 0) > DEAD_ZONE ? Math.sign(pad.axes[1]) : 0;
+    if (pad.buttons[14]?.pressed) dx = -1;
+    if (pad.buttons[15]?.pressed) dx = 1;
+    if (pad.buttons[12]?.pressed) dy = -1;
+    if (pad.buttons[13]?.pressed) dy = 1;
+    if (dx || dy) return { dx, dy };
+  }
+  return null;
+}
 
 /** Direção pedida pelo jogador no momento: { dx, dy } com valores -1, 0 ou 1. */
 export function movementVector() {
@@ -22,8 +42,14 @@ export function movementVector() {
     dx += vector[0];
     dy += vector[1];
   }
+  if (!dx && !dy && gamepadActive) {
+    const pad = gamepadVector();
+    if (pad) return pad;
+  }
   return { dx: Math.sign(dx), dy: Math.sign(dy) };
 }
+
+let gamepadActive = false;
 
 export const clearInput = () => pressed.clear();
 
@@ -81,6 +107,18 @@ export function bindInput({ canvas, touchPad, touchAction, canMove, onInteract, 
   }
   const onActionTap = () => canMove() && onInteract();
 
+  // Controle de videogame: o botão de interagir dispara uma vez por aperto
+  let wasPressed = false;
+  const pollGamepad = () => {
+    const pads = navigator.getGamepads?.() ?? [];
+    const pad = [...pads].find(Boolean);
+    gamepadActive = Boolean(pad);
+    const down = Boolean(pad && GAMEPAD_INTERACT.some((index) => pad.buttons[index]?.pressed));
+    if (down && !wasPressed && canMove()) onInteract();
+    wasPressed = down;
+  };
+  const gamepadTimer = 'getGamepads' in navigator ? setInterval(pollGamepad, 50) : null;
+
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('blur', onBlur);
@@ -94,6 +132,8 @@ export function bindInput({ canvas, touchPad, touchAction, canMove, onInteract, 
     canvas.removeEventListener('pointerdown', onPointerDown);
     touchAction.removeEventListener('click', onActionTap);
     padHandlers.forEach((unbind) => unbind());
+    clearInterval(gamepadTimer);
+    gamepadActive = false;
     pressed.clear();
   };
 }

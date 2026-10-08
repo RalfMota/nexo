@@ -20,7 +20,7 @@ const LEGACY_KEY = 'nexo_v1';
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 export const DEBUG = new URLSearchParams(location.search).get('debug') === '1' && LOCAL_HOSTS.includes(location.hostname);
 
-const DEFAULT_SETTINGS = { big: false, calm: false, music: true, volume: 0.45 };
+const DEFAULT_SETTINGS = { big: false, calm: false, music: true, volume: 0.45, sfx: true, sfxVolume: 0.5, captions: false, contrast: false };
 
 function createFreshState() {
   return {
@@ -371,6 +371,7 @@ export function wipeAll() {
 export function applySettings() {
   document.body.classList.toggle('big', state.set.big);
   document.body.classList.toggle('calm', state.set.calm);
+  document.body.classList.toggle('contrast', Boolean(state.set.contrast));
 }
 
 export const prefersCalm = () =>

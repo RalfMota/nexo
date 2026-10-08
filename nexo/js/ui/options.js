@@ -4,18 +4,26 @@ import { state, saveState, applySettings } from '../core/state.js';
 import { escapeHtml, qs } from '../core/dom.js';
 import { exportResearchData, researchSummary } from '../core/research-log.js';
 import { musicSettings, setMusicEnabled, setMusicVolume } from '../core/music.js';
+import { sfxSettings, setSfxEnabled, setSfxVolume, setCaptions } from '../core/sfx.js';
 
 export function accessibilityMarkup() {
   return `
     <label class="row"><input type="checkbox" data-setting="big" ${state.set.big ? 'checked' : ''}> Texto maior</label>
     <label class="row"><input type="checkbox" data-setting="calm" ${state.set.calm ? 'checked' : ''}> Reduzir animações</label>
     <label class="row"><input type="checkbox" data-music="on" ${musicSettings().on ? 'checked' : ''}> Música</label>
-    <label class="row">Volume <input type="range" data-music="volume" min="0" max="100" value="${Math.round(musicSettings().volume * 100)}" aria-label="Volume da música"></label>`;
+    <label class="row">Volume <input type="range" data-music="volume" min="0" max="100" value="${Math.round(musicSettings().volume * 100)}" aria-label="Volume da música"></label>
+    <label class="row"><input type="checkbox" data-sfx="on" ${sfxSettings().on ? 'checked' : ''}> Efeitos sonoros</label>
+    <label class="row">Volume dos efeitos <input type="range" data-sfx="volume" min="0" max="100" value="${Math.round(sfxSettings().volume * 100)}" aria-label="Volume dos efeitos sonoros"></label>
+    <label class="row"><input type="checkbox" data-sfx="captions" ${sfxSettings().captions ? 'checked' : ''}> Legendas dos sons (aviso escrito a cada som)</label>
+    <label class="row"><input type="checkbox" data-setting="contrast" ${state.set.contrast ? 'checked' : ''}> Alto contraste</label>`;
 }
 
 export function bindAccessibility(root) {
   root.querySelector('[data-music="on"]')?.addEventListener('change', (event) => setMusicEnabled(event.target.checked));
   root.querySelector('[data-music="volume"]')?.addEventListener('input', (event) => setMusicVolume(Number(event.target.value) / 100));
+  root.querySelector('[data-sfx="on"]')?.addEventListener('change', (event) => setSfxEnabled(event.target.checked));
+  root.querySelector('[data-sfx="volume"]')?.addEventListener('change', (event) => setSfxVolume(Number(event.target.value) / 100));
+  root.querySelector('[data-sfx="captions"]')?.addEventListener('change', (event) => setCaptions(event.target.checked));
   root.querySelectorAll('[data-setting]').forEach((input) => {
     input.addEventListener('change', () => {
       state.set[input.dataset.setting] = input.checked;

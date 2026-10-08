@@ -4,6 +4,7 @@ import { applySettings, onSaveProblem } from './core/state.js';
 import { migrateSavedLogs } from './core/research-log.js';
 import { onLogProblem } from './core/log-store.js';
 import { showToast } from './ui/toast.js';
+import { initCaptions } from './ui/captions.js';
 import { showProfiles } from './ui/profile-screen.js';
 import { initMusic } from './core/music.js';
 import { initCloudSync } from './core/cloud.js';
@@ -20,6 +21,7 @@ onSaveProblem((message) => showToast('Atenção:', message, 12000));
 onLogProblem((message) => showToast('Modo Pesquisa:', message, 12000));
 
 applySettings();
+initCaptions();
 migrateSavedLogs();
 initMusic();
 initCloudSync();

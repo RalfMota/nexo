@@ -301,3 +301,33 @@ body.calm *::after { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Legendas dos sons */
+.sfx-caption {
+  position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%);
+  padding: 4px 12px; border-radius: 6px; z-index: 50; pointer-events: none;
+  background: rgba(10, 8, 30, .88); color: #fff; font: 600 .95rem var(--font-display);
+  opacity: 0; transition: opacity .2s;
+}
+.sfx-caption.is-on { opacity: 1; }
+
+/* Alto contraste: painéis escuros sólidos, texto branco puro, bordas e foco bem marcados */
+body.contrast {
+  --glass: #000;
+  --glass-strong: #000;
+  --glass-edge: #fff;
+  --text: #fff;
+  --text-soft: #fff;
+  --paper: #fff;
+  --paper-2: #fff;
+  --ink: #000;
+  --ink-soft: #000;
+}
+body.contrast .frame,
+body.contrast .modal,
+body.contrast .quest,
+body.contrast .dialogue { border: 2px solid #fff !important; }
+body.contrast .muted,
+body.contrast small { color: #fff !important; }
+body.contrast :focus-visible { outline: 3px solid #ffd84a !important; outline-offset: 2px; }
+body.contrast .sfx-caption { background: #000; border: 2px solid #fff; }
