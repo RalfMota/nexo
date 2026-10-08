@@ -197,3 +197,43 @@ test('Promoção: preço por cristal e depois o desconto de 20%', async ({ page 
   expect(await missionDone(page, 'r2c')).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('Custo de Viagem: cada caixa na rota mais barata, com o quadro de custos', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r4b');
+  for (const d of [4, 12, 20]) await useObject(page, `milestone-${d}`);
+  const plotted = await page.evaluate(async () => (await import('/js/world/quest-layer.js')).questObjects().some((o) => o.id === 'cost-board'));
+  expect(plotted).toBe(true);
+  // Erro: a caixa de 20 léguas na Rota A
+  for (const [d, route] of [[4, 'A'], [12, 'B'], [20, 'A']]) {
+    await useObject(page, `parcel-${d}`);
+    await useObject(page, `wagon-${route}`);
+  }
+  await useObject(page, 'horn');
+  expect(await missionDone(page, 'r4b')).toBe(false);
+  await useObject(page, 'wagon-A'); // tira a última caixa (20) da Rota A
+  await useObject(page, 'wagon-B');
+  await useObject(page, 'horn');
+  expect(await missionDone(page, 'r4b')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Ponto de Mudança: a placa no marco onde as retas se cruzam', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r4d');
+  for (const d of [2, 18]) await useObject(page, `milestone-${d}`);
+  await useObject(page, 'turn-sign');
+  await useObject(page, 'milestone-6');
+  expect(await missionDone(page, 'r4d')).toBe(false);
+  await wait(page, 1600);
+  await useObject(page, 'turn-sign');
+  await useObject(page, 'milestone-10');
+  expect(await missionDone(page, 'r4d')).toBe(true);
+  expect(errors).toEqual([]);
+});

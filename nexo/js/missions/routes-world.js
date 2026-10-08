@@ -6,6 +6,10 @@
  *   da Rota B; a corneta manda as caravanas e confere o gasto.
  * r4d Ponto de Mudança: o jogador finca a placa no marco em que a rota mais barata muda.
  *
+ * Quadro de custos (nas duas missões): cada marco lido vira dois pontos num gráfico de custo
+ * por distância, ao lado da Estação, e os pontos de cada rota se ligam numa reta. É o primeiro
+ * gráfico do jogo, antes do Núcleo: o ponto de mudança aparece como o cruzamento das retas.
+ *
  * Os eventos registrados para a pesquisa são os mesmos da versão em janela.
  */
 
@@ -47,6 +51,111 @@ function addMilestones(api, { onRead, onUse, isRead }) {
   });
 }
 
+/* ---------- Quadro de custos: o gráfico das leituras ---------- */
+
+const BOARD = { x: 14 * TILE + 24, y: 5 * TILE + 28 }; // pés do quadro, à direita do mural da Estação
+const PLOT = { w: 88, h: 58, maxD: 26, maxCost: 90 };
+const ROUTE_COLORS = { A: '#ff7a6b', B: '#7fb0ff' };
+
+/**
+ * Quadro com o gráfico custo × distância. `marker()` devolve a distância marcada pela placa
+ * (ou null); `showCrossing()` diz se o cruzamento das retas já pode aparecer.
+ */
+function addCostBoard(readings, { marker = () => null, showCrossing = () => false } = {}) {
+  addQuestObject({
+    id: 'cost-board',
+    x: BOARD.x,
+    y: BOARD.y,
+    reach: 30,
+    label: 'Quadro de custos',
+    draw: (ctx, t) => drawCostBoard(ctx, readings.distances(), marker(), showCrossing(), t),
+    onInteract: () => {
+      const count = readings.distances().length;
+      showBubble(BOARD.x, BOARD.y - 96, count
+        ? `${count} ${count === 1 ? 'marco lido' : 'marcos lidos'}. Cada ponto é o custo de uma rota naquela distância: vermelho, Rota A; azul, Rota B.`
+        : 'O quadro desenha o custo de cada rota pela distância. Encoste nos marcos da estrada para acender os pontos.', 6);
+    },
+  });
+}
+
+function drawCostBoard(ctx, distances, marker, crossing, t) {
+  const left = Math.round(BOARD.x - PLOT.w / 2 - 10);
+  const top = Math.round(BOARD.y - PLOT.h - 34);
+  const width = PLOT.w + 20;
+  const height = PLOT.h + 26;
+  // Pés e moldura de madeira
+  ctx.fillStyle = '#4f3019';
+  ctx.fillRect(left + 10, top + height, 4, BOARD.y - top - height);
+  ctx.fillRect(left + width - 14, top + height, 4, BOARD.y - top - height);
+  ctx.fillStyle = '#3a2412';
+  ctx.fillRect(left - 1, top - 1, width + 2, height + 2);
+  ctx.fillStyle = '#8a5a30';
+  ctx.fillRect(left, top, width, height);
+  ctx.fillStyle = '#a8743e';
+  ctx.fillRect(left, top, width, 2);
+  // Quadro-negro
+  const gx = left + 12;
+  const gy = top + 6;
+  ctx.fillStyle = '#23402f';
+  ctx.fillRect(left + 4, top + 4, width - 8, height - 8);
+  const px = (d) => gx + (d / PLOT.maxD) * PLOT.w;
+  const py = (cost) => gy + PLOT.h - (cost / PLOT.maxCost) * PLOT.h;
+  // Grade e eixos
+  ctx.fillStyle = 'rgba(255, 255, 255, .08)';
+  for (let d = 2; d <= PLOT.maxD; d += 2) ctx.fillRect(Math.round(px(d)), gy, 1, PLOT.h);
+  for (let c = 10; c <= PLOT.maxCost; c += 10) ctx.fillRect(gx, Math.round(py(c)), PLOT.w, 1);
+  ctx.fillStyle = '#e8f0e0';
+  ctx.fillRect(gx, gy, 1, PLOT.h + 1);
+  ctx.fillRect(gx, gy + PLOT.h, PLOT.w, 1);
+  ctx.font = '600 6px "Fredoka", sans-serif';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#b6d8c0';
+  for (const d of [0, 10, 20]) ctx.fillText(String(d), Math.round(px(d)), gy + PLOT.h + 2);
+  ctx.fillText('léguas', Math.round(px(PLOT.maxD) - 8), gy + PLOT.h + 8);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (const c of [0, 50]) ctx.fillText(String(c), gx - 2, Math.round(py(c)));
+  ctx.save();
+  ctx.translate(left + 4, gy + PLOT.h / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('moedas', 0, 0);
+  ctx.restore();
+  // Placa fincada: linha vertical na distância marcada
+  if (marker != null) {
+    ctx.fillStyle = 'rgba(255, 207, 74, .8)';
+    for (let y = gy; y < gy + PLOT.h; y += 3) ctx.fillRect(Math.round(px(marker)), y, 1, 2);
+  }
+  // Retas e pontos de cada rota
+  const sorted = [...distances].sort((a, b) => a - b);
+  for (const [key, costOf] of [['A', costA], ['B', costB]]) {
+    ctx.strokeStyle = ROUTE_COLORS[key];
+    ctx.lineWidth = 1;
+    if (sorted.length >= 2) {
+      ctx.beginPath();
+      sorted.forEach((d, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, px(d) + 0.5, py(costOf(d)) + 0.5));
+      ctx.stroke();
+    }
+    ctx.fillStyle = ROUTE_COLORS[key];
+    for (const d of sorted) ctx.fillRect(Math.round(px(d)) - 1, Math.round(py(costOf(d))) - 1, 3, 3);
+  }
+  // Cruzamento das retas (5 + 3d = 15 + 2d em d = 10)
+  if (crossing) {
+    const pulse = 3 + Math.round(Math.sin(t * 4));
+    ctx.strokeStyle = '#ffe9a0';
+    ctx.strokeRect(Math.round(px(10)) - pulse + 0.5, Math.round(py(costA(10))) - pulse + 0.5, pulse * 2, pulse * 2);
+  }
+  // Legenda
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = ROUTE_COLORS.A;
+  ctx.fillText('A', gx + 4, gy + 4);
+  ctx.fillStyle = ROUTE_COLORS.B;
+  ctx.fillText('B', gx + 12, gy + 4);
+  drawTag(ctx, BOARD.x, top - 6, 'quadro de custos');
+}
+
 /** Registro das leituras dos marcos (mesmo formato da versão em janela). */
 function createReadings(api) {
   const rows = [];
@@ -54,6 +163,11 @@ function createReadings(api) {
   return {
     rows,
     isRead: (d) => read.has(d),
+    distances: () => [...read],
+    /** Acende um ponto no quadro sem contar como leitura (o cruzamento, depois da vitória). */
+    reveal(d) {
+      read.add(d);
+    },
     read(d) {
       read.add(d);
       rows.push([d, costA(d), costB(d)]);
@@ -79,6 +193,7 @@ function mountTravelCostWorld(api) {
   };
 
   addMilestones(api, { onRead: readings.read, isRead: readings.isRead });
+  addCostBoard(readings);
 
   DELIVERIES.forEach((d, i) => {
     const home = PARCEL_HOMES[i];
@@ -175,7 +290,7 @@ function mountTravelCostWorld(api) {
 
   api.onCleanup(clearQuestLayer);
   api.setStage(0);
-  api.setObjective('Encoste nos marcos para comparar as rotas. Leve cada caixa à carroça mais barata e toque a corneta.');
+  api.setObjective('Encoste nos marcos para comparar as rotas: cada leitura aparece no quadro de custos, ao lado da Estação. Leve cada caixa à carroça mais barata e toque a corneta.');
   api.record(['Distância', 'Rota A', 'Rota B'], readings.rows);
 }
 
@@ -199,6 +314,8 @@ function mountTurningPointWorld(api) {
       return true;
     },
   });
+
+  addCostBoard(readings, { marker: () => plantedAt, showCrossing: () => plantedAt === 10 || plantedAt === 12 });
 
   addQuestObject({
     id: 'turn-sign',
@@ -232,9 +349,10 @@ function mountTurningPointWorld(api) {
     burst(stone.x + 9, stone.y, 'dust', 8);
     if (api.attempt(d === 10 || d === 12, { d })) {
       burst(stone.x, stone.y - 20, 'success', 24);
+      readings.reveal(10);
       api.win(d === 10
-        ? 'No marco de 10 léguas as rotas custam igual; depois dele, a Rota B compensa. O mapa foi recalibrado.'
-        : 'A partir deste marco a Rota B compensa (no de 10 léguas as duas custam igual). O mapa foi recalibrado.');
+        ? 'No marco de 10 léguas as rotas custam igual: no quadro de custos, é onde as duas retas se cruzam. Depois dele, a Rota B compensa.'
+        : 'A partir deste marco a Rota B compensa. No quadro de custos, as retas se cruzam no marco de 10 léguas, onde as duas custam igual.');
       return;
     }
     api.fail(d < 10 ? `No marco de ${d} léguas a Rota A ainda é a mais barata.` : `No marco de ${d} léguas a Rota B já era a mais barata antes desse ponto.`);
@@ -246,7 +364,7 @@ function mountTurningPointWorld(api) {
 
   api.onCleanup(clearQuestLayer);
   api.setStage(0);
-  api.setObjective('Compare as rotas nos marcos e finque a placa no marco em que a rota mais barata muda.');
+  api.setObjective('Compare as rotas nos marcos (o quadro de custos desenha as retas) e finque a placa no marco em que a rota mais barata muda.');
   api.record(['Distância', 'Rota A', 'Rota B'], readings.rows);
 }
 
@@ -265,7 +383,7 @@ export default {
     relation: 'Rota A: C = 5 + 3d; Rota B: C = 15 + 2d',
     categories: ['relações entre grandezas', 'previsão', 'função'],
     hints: [
-      'Encoste em marcos de distâncias diferentes e compare as moedas das duas rotas no Registro.',
+      'Encoste em marcos de distâncias diferentes e compare as moedas das duas rotas no Registro e no quadro de custos.',
       'Uma rota começa mais cara, mas cresce mais devagar. Observe como a diferença entre elas muda com a distância.',
       'Para cada caixa, vá até o marco daquela distância e leve a caixa à carroça da rota mais barata. Com as mãos vazias, dá para tirar uma caixa da carroça.',
     ],
@@ -285,8 +403,8 @@ export default {
     relation: '5 + 3d = 15 + 2d em d = 10',
     categories: ['função', 'previsão'],
     hints: [
-      'Compare as rotas em marcos perto e longe da Estação. Quem leva vantagem muda?',
-      'Procure dois marcos vizinhos em que a rota mais barata é diferente.',
+      'Compare as rotas em marcos perto e longe da Estação e olhe o quadro de custos: qual reta fica mais baixa?',
+      'No quadro, a rota mais barata é a reta de baixo. Procure onde a reta de baixo troca de cor: é ali que as retas se cruzam.',
       'Procure o marco em que as moedas das duas rotas ficam iguais, ou o primeiro em que a Rota B fica mais barata, e finque a placa ali.',
     ],
     mountWorld: mountTurningPointWorld,
