@@ -140,7 +140,7 @@ export function cleanStudent(id, body) {
     name: clip(body?.apelido, 24).trim() || 'Aluno',
     created: Number(body?.criado) || Date.now(),
     lastSeen: Date.now(),
-    save: { player, done, stats: pick(data.stats), seen: pick(data.seen) },
+    save: { player, done, stats: pick(data.stats), seen: pick(data.seen), track: data.track === 'rapida' ? 'rapida' : 'completa' },
     flags: plausibility(done, data.dbg),
   };
 }

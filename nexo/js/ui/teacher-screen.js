@@ -10,11 +10,12 @@
 
 import { qs, qsa, escapeHtml } from '../core/dom.js';
 import {
-  listStudents, createStudent, renameStudent, resetStudent, deleteStudent,
+  listStudents, createStudent, renameStudent, resetStudent, deleteStudent, setStudentTrack,
   setTeacherPin, checkTeacherPin, wipeAll, applySettings,
   teacherTurma, setTeacherTurma, computerTurma, setComputerTurma, turmaOf,
 } from '../core/state.js';
 import { createClass, readClass, removeFromClass, normalizeCode } from '../core/cloud.js';
+import { TRACKS } from '../game/progress.js';
 import { studentReport, STATUS, formatSeconds, formatPercent } from '../game/assessment.js';
 import { TOPICS } from '../data/curriculum.js';
 import { MISSIONS } from '../missions/index.js';
@@ -181,6 +182,9 @@ function renderReport() {
       <div class="report__who">
         <h2>${escapeHtml(student.name)}</h2>
         <p class="muted small">Último acesso: ${formatDate(report.last)} · cadastrado em ${formatDate(student.created).slice(0, 10)}${student.origin === 'online' ? ' · jogou em outro computador (turma online)' : ''}</p>
+        <p class="small">${student.origin === 'online'
+          ? `${escapeHtml(TRACKS[student.save?.track === 'rapida' ? 'rapida' : 'completa'].name)}`
+          : `<label>Trilha: <select data-act="track">${Object.entries(TRACKS).map(([id, track]) => `<option value="${id}" ${(student.save?.track === 'rapida' ? 'rapida' : 'completa') === id ? 'selected' : ''}>${escapeHtml(track.name)} (${escapeHtml(track.detail)})</option>`).join('')}</select></label>`}</p>
         ${flagsOf(student).length ? `<p class="small tone-warn">Progresso a conferir: ${escapeHtml(flagsOf(student).join(', '))}.</p>` : ''}
       </div>
       <div class="row report__actions">${student.origin === 'online' ? `
@@ -280,6 +284,10 @@ function renderReport() {
       renameStudent(student.id, name);
       refresh();
     }
+  });
+  qs('[data-act="track"]', root)?.addEventListener('change', (event) => {
+    setStudentTrack(student.id, event.target.value);
+    refresh();
   });
   qs('[data-act="reset"]', root).addEventListener('click', () => {
     if (!confirm(`Zerar todo o progresso e as estatísticas de ${student.name}? O cadastro continua.`)) return;

@@ -37,6 +37,7 @@ function payload(student) {
         stats: save.stats ?? {},
         seen: save.seen ?? {},
         dbg: Boolean(save.dbg), // regiões liberadas pelo modo de teste: o professor fica sabendo
+        track: save.track === 'rapida' ? 'rapida' : 'completa',
       },
     },
   };

@@ -12,6 +12,7 @@ import {
 import { drawCharacter, drawPortrait } from '../art/characters.js';
 import { animateVillageBackground, stopVillageBackground, showTitle } from './title-screen.js';
 import { showGame } from './game-screen.js';
+import { logEvent } from '../core/research-log.js';
 
 const DIRECTIONS = ['down', 'right', 'up', 'left'];
 
@@ -99,6 +100,14 @@ export function showCreate() {
               <label class="creator__name">
                 <span class="option__label">Nome</span>
                 <input id="player-name" maxlength="20" placeholder="Reconector" autocomplete="off" value="${escapeHtml(draft.name.slice(0, 20))}">
+              </label>
+              <label class="creator__name">
+                <span class="option__label">Ano escolar</span>
+                <select id="player-track">
+                  <option value="completa" ${state.track !== 'rapida' ? 'selected' : ''}>Do 2º ao 7º ano: trilha completa</option>
+                  <option value="rapida" ${state.track === 'rapida' ? 'selected' : ''}>8º ou 9º ano: trilha rápida</option>
+                </select>
+                <small class="muted">Na trilha rápida, o Vale e o Mercado viram aquecimento opcional.</small>
               </label>
             </div>
             <div class="creator__editor">
@@ -237,6 +246,11 @@ export function showCreate() {
   qs('[data-role="start"]', app).addEventListener('click', () => {
     cancelAnimationFrame(frameId);
     state.player = { ...draft, name: qs('#player-name', app).value.trim() || 'Reconector' };
+    const track = qs('#player-track', app).value === 'rapida' ? 'rapida' : 'completa';
+    if (state.track !== track) {
+      state.track = track;
+      logEvent('interaction', { trilha: track });
+    }
     saveState();
     stopVillageBackground();
     showGame();

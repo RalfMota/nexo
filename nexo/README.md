@@ -29,6 +29,8 @@ As músicas ficam na pasta `audio/` e tocam em sequência, na ordem da lista `TR
 
 ## Regiões e missões
 
+**Trilhas.** Ao criar o personagem, o aluno informa o ano escolar. A **trilha completa** (2º ao 7º ano, padrão) abre as regiões em ordem, todas obrigatórias. A **trilha rápida** (8º e 9º anos) transforma o Vale e o Mercado, de conteúdos dos anos iniciais, em **aquecimento opcional**: depois do Prólogo, Vale, Mercado e Oficina ficam abertos, e o caminho obrigatório segue pela Oficina, Rotas, Torre e Núcleo. O professor vê e muda a trilha de cada aluno no Painel (a trilha também vai para a turma online). A troca fica registrada no Modo Pesquisa como `interaction { trilha }`.
+
 | # | Região | Personagem | Missões | Conteúdo |
 |---|---|---|---|---|
 | 0 | Praça do Nexo (prólogo) | Lyra | A Ruptura | Familiarização |

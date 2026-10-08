@@ -13,6 +13,7 @@ export const REGIONS = [
   },
   {
     id: 'r1',
+    warmup: true, // na trilha rápida (8º e 9º anos), região de aquecimento opcional
     name: 'Vale dos Recursos',
     place: 'Vale dos Recursos',
     motto: 'Fazer o suficiente chegar a todos',
@@ -24,6 +25,7 @@ export const REGIONS = [
   },
   {
     id: 'r2',
+    warmup: true, // na trilha rápida (8º e 9º anos), região de aquecimento opcional
     name: 'Mercado das Trocas',
     place: 'Mercado das Trocas',
     motto: 'Nem toda quantidade vale o mesmo',

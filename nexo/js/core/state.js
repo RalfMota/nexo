@@ -29,6 +29,7 @@ function createFreshState() {
     stats: {},             // desempenho por missão, para o Painel do Professor (ver game/stats.js)
     inv: [],               // artefatos recebidos
     seen: {},              // regiões já visitadas
+    track: 'completa',     // 'completa' ou 'rapida' (8º e 9º anos: Vale e Mercado opcionais)
     research: { on: false, id: '' },
     log: [],               // eventos do Modo Pesquisa
     set: null,             // aponta para as opções do computador (school.set)
@@ -194,12 +195,26 @@ export function renameStudent(id, name) {
   writeSchool();
 }
 
+/** Muda a trilha de um aluno (pelo Painel do Professor). */
+export function setStudentTrack(id, track) {
+  const value = track === 'rapida' ? 'rapida' : 'completa';
+  if (id === school.active) {
+    state.track = value;
+    saveState();
+    return;
+  }
+  const student = school.students[id];
+  if (!student?.save) return;
+  student.save.track = value;
+  writeSchool();
+}
+
 /** Apaga o progresso de um aluno (o cadastro e os registros de pesquisa continuam). */
 export function resetStudent(id) {
   const student = school.students[id];
   if (!student) return;
-  const { research, log } = student.save ?? {};
-  student.save = snapshot(Object.assign(createFreshState(), research ? { research, log: log ?? [] } : {}));
+  const { research, log, track } = student.save ?? {};
+  student.save = snapshot(Object.assign(createFreshState(), research ? { research, log: log ?? [] } : {}, track ? { track } : {}));
   if (school.active === id) replaceState(stateFor(id));
   writeSchool();
 }
@@ -320,7 +335,7 @@ export async function checkTeacherPin(pin) {
 
 /** Novo jogo: apaga o progresso do aluno ativo, mas mantém estatísticas, registros de pesquisa e opções. */
 export function startNewGame() {
-  const kept = { research: state.research, log: state.log, stats: state.stats };
+  const kept = { research: state.research, log: state.log, stats: state.stats, track: state.track };
   replaceState(Object.assign(stateFor(null), kept));
   saveState();
 }

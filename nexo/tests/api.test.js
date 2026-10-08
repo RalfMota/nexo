@@ -84,6 +84,17 @@ test('o aluno grava o próprio progresso e o professor lê sem ver o resumo da c
   assert.equal(body.alunos[0].name, 'Lia');
   assert.equal(body.alunos[0].keyHash, undefined);
   assert.deepEqual(body.alunos[0].flags, []);
+  assert.equal(body.alunos[0].save.track, 'completa');
+});
+
+test('a trilha do aluno chega ao professor (só os dois valores conhecidos)', async () => {
+  const codigo = await newClass();
+  await call(sync, { codigo, aluno: aluno(KEY_A, { track: 'rapida' }) });
+  let { body } = await call(turma, { acao: 'ler', codigo, senha: SENHA });
+  assert.equal(body.alunos[0].save.track, 'rapida');
+  await call(sync, { codigo, aluno: aluno(KEY_A, { track: '<script>' }) });
+  ({ body } = await call(turma, { acao: 'ler', codigo, senha: SENHA }));
+  assert.equal(body.alunos[0].save.track, 'completa');
 });
 
 test('outra chave não sobrescreve o progresso de um aluno já registrado', async () => {

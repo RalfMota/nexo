@@ -18,7 +18,7 @@ import { closeDialogue } from '../ui/dialogue.js';
 import { refreshHud } from '../ui/hud.js';
 import { showToast } from '../ui/toast.js';
 import { registerTable } from '../missions/widgets.js';
-import { isRegionDone, isRegionOpen, isMissionDone } from './progress.js';
+import { isRegionDone, isRegionOpen, isMissionDone, isWarmup } from './progress.js';
 import { statStart, statAttempt, statHint, statWin, statAbandon } from './stats.js';
 
 const FAILS_BEFORE_SUPPORT = 3;
@@ -160,7 +160,9 @@ function announceRegion(region) {
   }
   if (region.id === 'p') showToast('Prólogo concluído.');
   else showToast('Região reconectada:', region.name);
-  const next = REGIONS[regionIndexOf(region.id) + 1];
+  // Próxima região obrigatória aberta (na trilha rápida, pula as de aquecimento)
+  const next = REGIONS.slice(regionIndexOf(region.id) + 1).find((item) => !isWarmup(item) && !isRegionDone(item))
+    ?? REGIONS[regionIndexOf(region.id) + 1];
   if (next && isRegionOpen(regionIndexOf(next.id))) {
     setTimeout(() => showToast('Caminho aberto:', next.id === 'f' ? 'o Núcleo está pronto para ser religado.' : `${next.name}, ${next.direction}.`), 900);
   }

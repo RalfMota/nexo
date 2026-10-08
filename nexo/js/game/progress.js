@@ -9,11 +9,26 @@ export const isMissionDone = (missionId) => Boolean(state.done[missionId]);
 
 export const isRegionDone = (region) => region.missions.length > 0 && region.missions.every(isMissionDone);
 
-/** As regiões se abrem em ordem: cada uma exige as anteriores concluídas (ou o modo debug). */
+/**
+ * Trilhas: na completa (padrão), todas as regiões são obrigatórias, em ordem. Na rápida,
+ * pensada para o 8º e o 9º ano, o Vale e o Mercado (conteúdos dos anos iniciais) viram
+ * aquecimento opcional: ficam abertos depois do Prólogo, mas não seguram o caminho.
+ */
+export const TRACKS = {
+  completa: { name: 'Trilha completa', detail: 'todas as regiões, em ordem (do 2º ao 9º ano)' },
+  rapida: { name: 'Trilha rápida', detail: 'para o 8º e o 9º ano: Vale e Mercado viram aquecimento opcional' },
+};
+
+export const currentTrack = () => (state.track === 'rapida' ? 'rapida' : 'completa');
+
+/** Região de aquecimento opcional na trilha do aluno. */
+export const isWarmup = (region) => currentTrack() === 'rapida' && Boolean(region?.warmup);
+
+/** As regiões se abrem em ordem: cada uma exige as anteriores obrigatórias concluídas (ou o modo debug). */
 export function isRegionOpen(index) {
   if (!REGIONS[index]) return false;
   if (index === 0 || state.dbg) return true;
-  return REGIONS.slice(0, index).every(isRegionDone);
+  return REGIONS.slice(0, index).filter((region) => !isWarmup(region)).every(isRegionDone);
 }
 
 export const isRegionOpenById = (regionId) => isRegionOpen(regionIndexOf(regionId));
@@ -22,7 +37,9 @@ export const isRegionOpenById = (regionId) => isRegionOpen(regionIndexOf(regionI
 export function isExtraUnlocked(missionId) {
   const mission = MISSIONS[missionId];
   if (!mission?.extra) return false;
-  return state.dbg || isRegionDone(regionById(mission.unlockAfter));
+  const after = regionById(mission.unlockAfter);
+  // Na trilha rápida, o desafio de uma região de aquecimento abre junto com ela
+  return state.dbg || isRegionDone(after) || (isWarmup(after) && isRegionOpenById(after.id));
 }
 
 /** Desafios extras de uma região que já estão liberados. */
@@ -30,9 +47,9 @@ export const unlockedExtras = (region) => (region.extras ?? []).filter(isExtraUn
 
 export const countDoneRegions = () => REGIONS.filter(isRegionDone).length;
 
-/** Primeira região aberta que ainda não foi concluída (ou null quando tudo foi concluído). */
+/** Primeira região obrigatória aberta e ainda não concluída (ou null quando tudo foi concluído). */
 export function currentRegion() {
-  return REGIONS.find((region, index) => isRegionOpen(index) && !isRegionDone(region)) ?? null;
+  return REGIONS.find((region, index) => isRegionOpen(index) && !isRegionDone(region) && !isWarmup(region)) ?? null;
 }
 
 export function objectiveText() {
