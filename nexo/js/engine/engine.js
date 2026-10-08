@@ -38,6 +38,14 @@ const worldScene = () => game?.scene.getScene('Mundo') ?? null;
 const interiorScene = () => (game?.scene.isActive('Interior') ? game.scene.getScene('Interior') : null);
 const activeScene = () => interiorScene() ?? worldScene();
 
+/** Renderizador: o padrão, ou o pedido na URL (?render=webgl | canvas) para comparar desempenho. */
+function rendererType() {
+  const asked = new URLSearchParams(location.search).get('render');
+  if (asked === 'webgl') return Phaser.WEBGL;
+  if (asked === 'canvas') return Phaser.CANVAS;
+  return Phaser.CANVAS;
+}
+
 /** Liga o motor dentro do elemento informado (o Phaser cria o próprio canvas lá dentro). */
 export function startWorld(container, { touchPad, touchAction, gameElement }) {
   stopWorld();
@@ -47,7 +55,7 @@ export function startWorld(container, { touchPad, touchAction, gameElement }) {
   engineState.transitioning = false;
 
   game = new Phaser.Game({
-    type: Phaser.CANVAS,
+    type: rendererType(),
     parent: container,
     backgroundColor: '#2d5a33',
     width: Math.max(1, Math.round(width * engineState.dpr)),
