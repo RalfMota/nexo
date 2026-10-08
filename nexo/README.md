@@ -131,7 +131,9 @@ js/
   game/               progresso (regiões abertas), sessão de missão (tentativas, dicas, conclusão),
                       estatísticas por missão/etapa e avaliação por tópico (Painel do Professor)
   missions/           um arquivo por região (*-world.js: missões no mapa) + world-kit.js
-                      (alavancas, mostradores, etiquetas); prologue.js (Prólogo na praça)
+                      (alavancas, mostradores, etiquetas); prologue.js (Prólogo na praça);
+                      kit/hands.js: mãos do jogador (pegar com limite, um tipo por vez, largar
+                      e o desenho acima da cabeça), usado pelas Comportas, Previsão, Caldeirão e Torre
   engine/             motor Phaser: cenas Mundo e Interior, jogador, efeitos (ver "Motor do jogo")
   world/              mapa, camadas de desenho, entrada (teclado/toque), história (falas), moradores, clima
   art/                desenho em pixel art: terreno, construções, personagens

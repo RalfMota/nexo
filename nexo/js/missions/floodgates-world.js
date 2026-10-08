@@ -9,8 +9,10 @@
  *   3. Depois da chuva: 18 baldes, as mesmas partes com um reservatório maior.
  */
 
-import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
+import { addQuestObject, clearQuestLayer, playAction, burst } from '../world/quest-layer.js';
 import { drawWoodBucket, drawValveWheel } from '../art/items.js';
+import { drawTag } from './world-kit.js';
+import { createHands } from './kit/hands.js';
 
 const TILE = 32;
 const MAX_IN_HAND = 3;
@@ -68,7 +70,6 @@ const joinList = (items) => (items.length < 2 ? items.join('') : `${items.slice(
 function mountFloodgatesWorld(api) {
   let stageIndex = 0;
   let inLake = 0;
-  let inHand = 0;
   let status = {}; // trigo/ervas/pomar → 'ok' | 'flood' | 'dry'
   const poured = { trigo: 0, ervas: 0, pomar: 0 };
   const rows = [];
@@ -77,8 +78,12 @@ function mountFloodgatesWorld(api) {
   const activeFields = () => Object.keys(stage().shares);
   const record = () => api.record(['Baldes', 'Trigo', 'Ervas', 'Pomar', ''], rows);
 
-  const bucketsItem = { label: 'baldes', draw: (ctx) => drawBuckets(ctx, 0, 0, inHand, 0.75, true) };
-  const refreshHands = () => setCarried(inHand > 0 ? bucketsItem : null);
+  const hands = createHands({
+    say: api.say,
+    limit: MAX_IN_HAND,
+    kinds: { balde: { name: 'baldes', draw: (ctx) => drawBuckets(ctx, 0, 0, hands.count, 0.75, true) } },
+    messages: { full: () => `Dá para carregar ${MAX_IN_HAND} baldes de cada vez.` },
+  });
 
   /* ---------- Objetos no mapa ---------- */
 
@@ -126,35 +131,26 @@ function mountFloodgatesWorld(api) {
       api.say('Não há mais baldes cheios no lago.', 'warn');
       return;
     }
-    if (inHand >= MAX_IN_HAND) {
-      api.say(`Dá para carregar ${MAX_IN_HAND} baldes de cada vez.`, 'warn');
-      return;
-    }
+    if (!hands.take('balde')) return;
     inLake--;
-    inHand++;
     status = {};
     playAction('crouch');
     burst(RACK.x, RACK.y - 8, 'sparkle', 4);
-    refreshHands();
   }
 
   function useField(id) {
     const field = FIELDS[id];
     status = {};
-    if (inHand > 0) {
-      inHand--;
+    if (hands.drop() !== null) {
       poured[id]++;
       playAction('crouch');
       burst(field.inlet.x, field.inlet.y - 4, 'sparkle', 6);
-      refreshHands();
       return;
     }
     // Mãos vazias: recolhe um balde de água de volta
-    if (poured[id] > 0) {
+    if (poured[id] > 0 && hands.take('balde')) {
       poured[id]--;
-      inHand++;
       playAction('crouch');
-      refreshHands();
       return;
     }
     api.say('Pegue baldes cheios na beira do lago primeiro.', 'warn');
@@ -163,7 +159,7 @@ function mountFloodgatesWorld(api) {
   function openGates() {
     const total = stage().total;
     const counts = { trigo: poured.trigo, ervas: poured.ervas, pomar: poured.pomar };
-    const left = inLake + inHand;
+    const left = inLake + hands.count;
     const data = { etapa: stageIndex + 1, reservatorio: total, ...counts };
     playAction('use');
 
@@ -202,12 +198,11 @@ function mountFloodgatesWorld(api) {
   function startStage(index, announce = true) {
     stageIndex = index;
     inLake = stage().total;
-    inHand = 0;
+    hands.dropAll();
     status = {};
     Object.keys(poured).forEach((id) => {
       poured[id] = 0;
     });
-    refreshHands();
     api.setStage(index);
     api.setObjective(stage().objective);
     if (announce) api.say(stage().intro);
@@ -220,21 +215,6 @@ function mountFloodgatesWorld(api) {
 }
 
 /* ---------- Desenho ---------- */
-
-function drawTag(ctx, x, y, text) {
-  ctx.font = '700 8px "Fredoka", sans-serif';
-  const width = Math.ceil(ctx.measureText(text).width) + 8;
-  const left = Math.round(x - width / 2);
-  const top = Math.round(y - 6);
-  ctx.fillStyle = '#4f3019';
-  ctx.fillRect(left - 1, top - 1, width + 2, 12);
-  ctx.fillStyle = '#fbf3df';
-  ctx.fillRect(left, top, width, 10);
-  ctx.fillStyle = '#2b1d14';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, Math.round(x), top + 5.5);
-}
 
 function drawBucket(ctx, x, y) {
   drawWoodBucket(ctx, x, y);

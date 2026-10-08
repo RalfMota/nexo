@@ -20,7 +20,8 @@ import { setBuildingHandler } from '../engine/interiors.js';
 import { enterBuilding, exitBuilding, isInside, buildingOfKind } from '../engine/engine.js';
 import { ensureCanvasTexture } from '../engine/actor-view.js';
 import { popIn } from '../engine/fx.js';
-import { setCarried, clearQuestLayer, playAction } from '../world/quest-layer.js';
+import { clearQuestLayer, playAction } from '../world/quest-layer.js';
+import { createHands } from './kit/hands.js';
 import { drawTag, drawArrow } from './world-kit.js';
 import { WALL_H } from '../art/interior-art.js';
 import {
@@ -95,7 +96,6 @@ function createTowerMission(api) {
     maxFloor: 1,
     lit: { 1: 0, 2: 0, 3: 0 },
     done: { 1: false, 2: false, 3: false, 4: false },
-    hand: { kind: null, items: [] }, // kind: 'rod' (azul) | 'cyan' | 'gold'; items: 10 (feixe) ou 1
     load: [],
     a: 0,
     b: 0,
@@ -105,7 +105,7 @@ function createTowerMission(api) {
   let now = 0; // relógio das camadas de desenho (segundos)
   let popups = []; // textos que sobem e somem ("+3", "+1")
 
-  const handCount = () => s.hand.items.reduce((sum, value) => sum + value, 0);
+  let floorNow = 1; // andar montado agora (o limite de hastes nas mãos muda no 4º andar)
   const loadText = (items) => {
     const bundles = items.filter((v) => v === 10).length;
     const loose = items.filter((v) => v === 1).length;
@@ -119,57 +119,52 @@ function createTowerMission(api) {
 
   /* ---------- O que o jogador carrega ---------- */
 
-  function refreshHands() {
-    if (!s.hand.items.length) {
-      s.hand.kind = null;
-      setCarried(null);
-      return;
+  /** Hastes nas mãos: feixes de 10 aparecem mais grossos e amarrados. */
+  const drawRods = (color) => (ctx, hands) => {
+    const bundles = hands.countOf(10);
+    const shown = Math.min(4, hands.size);
+    for (let i = 0; i < shown; i++) {
+      const thick = i < bundles ? 5 : 3;
+      const y = 4 - i * 4;
+      ctx.fillStyle = '#1a1028';
+      ctx.fillRect(-10, y - 1, 20, thick + 2);
+      ctx.fillStyle = color[1];
+      ctx.fillRect(-9, y, 18, thick);
+      ctx.fillStyle = color[2];
+      ctx.fillRect(-9, y, 18, 1);
+      if (i < bundles) {
+        ctx.fillStyle = '#c8a070';
+        ctx.fillRect(-2, y - 1, 4, thick + 2);
+      }
     }
-    const kind = s.hand.kind;
-    const color = kind === 'gold' ? ['#8a5a12', '#ffc34a', '#fffbe8'] : ['#127a86', '#2fb8c8', '#c8f8ff'];
-    setCarried({
-      label: kind === 'gold' ? 'hastes douradas (de partida)' : kind === 'cyan' ? 'hastes azuis (por módulo)' : 'hastes de luz',
-      draw: (ctx) => {
-        const bundles = s.hand.items.filter((v) => v === 10).length;
-        const shown = Math.min(4, s.hand.items.length);
-        for (let i = 0; i < shown; i++) {
-          const thick = i < bundles ? 5 : 3;
-          const y = 4 - i * 4;
-          ctx.fillStyle = '#1a1028';
-          ctx.fillRect(-10, y - 1, 20, thick + 2);
-          ctx.fillStyle = color[1];
-          ctx.fillRect(-9, y, 18, thick);
-          ctx.fillStyle = color[2];
-          ctx.fillRect(-9, y, 18, 1);
-          if (i < bundles) {
-            ctx.fillStyle = '#c8a070';
-            ctx.fillRect(-2, y - 1, 4, thick + 2);
-          }
-        }
-        drawTag(ctx, 0, -16, String(handCount()));
+    drawTag(ctx, 0, -16, String(hands.count));
+  };
+  const BLUE = ['#127a86', '#2fb8c8', '#c8f8ff'];
+  const GOLDEN = ['#8a5a12', '#ffc34a', '#fffbe8'];
+
+  const hands = createHands({
+    say: api.say,
+    kinds: {
+      rod: {
+        name: 'hastes de luz',
+        get limit() {
+          return floorNow <= 3 ? 12 : MAX_HAND;
+        },
+        draw: drawRods(BLUE),
       },
-    });
-  }
+      cyan: { name: 'hastes azuis (por módulo)', limit: MAX_PIECES, draw: drawRods(BLUE) },
+      gold: { name: 'hastes douradas (de partida)', limit: MAX_PIECES, draw: drawRods(GOLDEN) },
+    },
+    messages: {
+      busy: () => 'Suas mãos já estão com hastes de outra cor. Use ou devolva antes.',
+      full: (limit) => `Suas mãos estão cheias (no máximo ${limit} hastes).`,
+    },
+  });
 
-  function take(kind, value, limit) {
-    if (s.hand.kind && s.hand.kind !== kind) {
-      api.say('Suas mãos já estão com hastes de outra cor. Use ou devolva antes.', 'warn');
-      return false;
-    }
-    if (handCount() + value > limit) {
-      api.say(`Suas mãos estão cheias (no máximo ${limit} hastes).`, 'warn');
-      return false;
-    }
-    s.hand.kind = kind;
-    s.hand.items.push(value);
+  function take(kind, value) {
+    if (!hands.take(kind, value)) return false;
     playAction('crouch');
-    refreshHands();
     return true;
-  }
-
-  function emptyHands() {
-    s.hand = { kind: null, items: [] };
-    refreshHands();
   }
 
   /* ---------- Registro ---------- */
@@ -348,7 +343,7 @@ function createTowerMission(api) {
     popIn(scene, rack, scene.fx, { delay: 200 });
     popIn(scene, panel, scene.fx, { delay: 350 });
 
-    scene.addInteractable({ x: 64, y: 272, reach: 30, promptY: 206, label: 'Pegar haste', enabled: () => !s.done[floor], onInteract: () => take('rod', 1, 12) });
+    scene.addInteractable({ x: 64, y: 272, reach: 30, promptY: 206, label: 'Pegar haste', enabled: () => !s.done[floor], onInteract: () => take('rod', 1) });
     scene.addInteractable({
       x: PANEL.x,
       y: PANEL.y + 10,
@@ -360,12 +355,11 @@ function createTowerMission(api) {
           api.say('Esta grade já está completa. Suba pela porta acesa.', 'ok');
           return;
         }
-        if (s.hand.kind !== 'rod' || !s.hand.items.length) {
+        if (!hands.holds('rod')) {
           api.say('Primeiro pegue hastes no suporte (à esquerda). Depois volte aqui e encaixe uma de cada vez.', 'warn');
           return;
         }
-        s.hand.items.pop();
-        refreshHands();
+        hands.drop();
         playAction('use');
         const index = s.lit[floor];
         grid.light(index);
@@ -391,7 +385,7 @@ function createTowerMission(api) {
       drawLedger(ctx);
       drawPopups(ctx);
       if (!s.done[floor]) {
-        if (s.hand.kind === 'rod') drawArrow(ctx, PANEL.x, PANEL.y - 46, t);
+        if (hands.holds('rod')) drawArrow(ctx, PANEL.x, PANEL.y - 46, t);
         else if (!s.lit[floor]) drawArrow(ctx, 64, 222, t);
       } else {
         drawArrow(ctx, DOOR.x, DOOR.y - 66, t);
@@ -405,8 +399,8 @@ function createTowerMission(api) {
     s.floorRows.push([floor, need]);
     recordFloors();
     api.log('interaction', { andar: floor, modulos: floor, hastes: need });
-    if (s.hand.items.length) {
-      emptyHands();
+    if (!hands.empty) {
+      hands.dropAll();
       api.say('As hastes que sobraram na sua mão voltaram para o suporte.');
     }
     door.open();
@@ -437,8 +431,8 @@ function createTowerMission(api) {
     const lever = place(scene, 'torre2:alavanca:false', leverSprite(false, '#5fe3d0'), LEVER.x, LEVER.y);
     [bundles, loose, cart, lever].forEach((item, i) => popIn(scene, item, scene.fx, { delay: 150 + i * 120 }));
 
-    scene.addInteractable({ x: CRATE.x, y: CRATE.y + 10, reach: 28, label: 'Pegar feixe de 10', enabled: () => !s.done[4], onInteract: () => take('rod', 10, MAX_HAND) });
-    scene.addInteractable({ x: RACK.x, y: RACK.y + 8, reach: 28, promptY: RACK.y - 56, label: 'Pegar haste solta', enabled: () => !s.done[4], onInteract: () => take('rod', 1, MAX_HAND) });
+    scene.addInteractable({ x: CRATE.x, y: CRATE.y + 10, reach: 28, label: 'Pegar feixe de 10', enabled: () => !s.done[4], onInteract: () => take('rod', 10) });
+    scene.addInteractable({ x: RACK.x, y: RACK.y + 8, reach: 28, promptY: RACK.y - 56, label: 'Pegar haste solta', enabled: () => !s.done[4], onInteract: () => take('rod', 1) });
     scene.addInteractable({
       x: CART.x,
       y: CART.y + 12,
@@ -446,9 +440,8 @@ function createTowerMission(api) {
       label: 'Carrinho',
       enabled: () => !s.done[4] && !busy,
       onInteract: () => {
-        if (s.hand.kind === 'rod' && s.hand.items.length) {
-          s.load = s.load.concat(s.hand.items);
-          emptyHands();
+        if (hands.holds('rod')) {
+          s.load = s.load.concat(hands.dropAll());
           playAction('crouch');
           scene.fx.sparkle(CART.x, CART.y - 16, 6);
           return;
@@ -522,7 +515,7 @@ function createTowerMission(api) {
         drawTag(ctx, RACK.x, RACK.y - 52, 'hastes soltas');
         drawTag(ctx, CART.x, CART.y - 38, loadText(s.load), s.load.length ? { fill: '#cfeefd' } : undefined);
         drawTag(ctx, LEVER.x, LEVER.y - 34, 'alavanca');
-        if (s.hand.kind === 'rod') drawArrow(ctx, CART.x, CART.y - 52, t);
+        if (hands.holds('rod')) drawArrow(ctx, CART.x, CART.y - 52, t);
         else if (s.load.length && !busy) drawArrow(ctx, LEVER.x, LEVER.y - 46, t);
       } else {
         drawArrow(ctx, DOOR.x, DOOR.y - 66, t);
@@ -563,13 +556,11 @@ function createTowerMission(api) {
 
     function useTube(which) {
       const kind = which === 'a' ? 'cyan' : 'gold';
-      if (!s.hand.items.length) {
+      if (hands.empty) {
         if (s[which] > 0) {
           // Mãos vazias: tira uma haste do tubo
           s[which]--;
-          s.hand.kind = kind;
-          s.hand.items.push(1);
-          refreshHands();
+          hands.take(kind);
           refreshLamps(true);
           return;
         }
@@ -578,7 +569,7 @@ function createTowerMission(api) {
           : 'Tubo dourado: quantas hastes de partida a grade tem antes do primeiro módulo. Pegue hastes douradas no caixote da direita.', 'warn');
         return;
       }
-      if (s.hand.kind !== kind) {
+      if (hands.kind !== kind) {
         api.say(which === 'a' ? 'O tubo azul só recebe hastes azuis.' : 'O tubo dourado só recebe hastes douradas.', 'warn');
         return;
       }
@@ -586,8 +577,7 @@ function createTowerMission(api) {
         api.say('Este tubo está cheio.', 'warn');
         return;
       }
-      s.hand.items.pop();
-      refreshHands();
+      hands.drop();
       playAction('use');
       s[which]++;
       const tube = tubeAt(which);
@@ -602,8 +592,8 @@ function createTowerMission(api) {
     [machine, cyan, gold, lever].forEach((item, i) => popIn(scene, item, scene.fx, { delay: 150 + i * 110 }));
     refreshLamps(false);
 
-    scene.addInteractable({ x: CRATES.cyan.x, y: CRATES.cyan.y + 10, reach: 28, label: 'Pegar haste azul', enabled: () => !s.won, onInteract: () => take('cyan', 1, MAX_PIECES) });
-    scene.addInteractable({ x: CRATES.gold.x, y: CRATES.gold.y + 10, reach: 28, label: 'Pegar haste dourada', enabled: () => !s.won, onInteract: () => take('gold', 1, MAX_PIECES) });
+    scene.addInteractable({ x: CRATES.cyan.x, y: CRATES.cyan.y + 10, reach: 28, label: 'Pegar haste azul', enabled: () => !s.won, onInteract: () => take('cyan', 1) });
+    scene.addInteractable({ x: CRATES.gold.x, y: CRATES.gold.y + 10, reach: 28, label: 'Pegar haste dourada', enabled: () => !s.won, onInteract: () => take('gold', 1) });
     for (const which of ['a', 'b']) {
       const tube = tubeAt(which);
       scene.addInteractable({
@@ -632,7 +622,7 @@ function createTowerMission(api) {
         lamps.forEach((lamp, i) => scene.tweens.add({ targets: lamp, y: { from: LAMP_Y - 4, to: LAMP_Y }, duration: 200, delay: i * 40, ease: 'Bounce.Out' }));
         if (api.attempt(hits === LAMPS, { a: s.a, b: s.b, acertos: hits })) {
           s.won = true;
-          emptyHands();
+          hands.dropAll();
           door.open();
           lamps.forEach((lamp, i) => scene.time.delayedCall(i * 60, () => scene.fx.sparkle(lamp.x, lamp.y - 8, 6)));
           api.win('Todas as lâmpadas acenderam: hastes = 3 × módulos + 1. Essa regra vale para qualquer grade, até uma de 100 módulos (301 hastes)! O observatório abriu e guardou a sua regra.');
@@ -694,8 +684,8 @@ function createTowerMission(api) {
       drawTag(ctx, CRATES.gold.x, CRATES.gold.y - 40, 'hastes douradas', { fill: '#ffe9a0' });
       if (!s.won) {
         drawTag(ctx, LEVER.x, LEVER.y - 34, 'testar');
-        if (s.hand.kind === 'cyan') drawArrow(ctx, tubeAt('a').cx, MACHINE.y - 72, t);
-        if (s.hand.kind === 'gold') drawArrow(ctx, tubeAt('b').cx, MACHINE.y - 72, t);
+        if (hands.holds('cyan')) drawArrow(ctx, tubeAt('a').cx, MACHINE.y - 72, t);
+        if (hands.holds('gold')) drawArrow(ctx, tubeAt('b').cx, MACHINE.y - 72, t);
       } else {
         drawArrow(ctx, DOOR.x, DOOR.y - 66, t);
       }
@@ -710,7 +700,7 @@ function createTowerMission(api) {
     const next = floor + 1;
     if (next > 5) return;
     s.maxFloor = Math.max(s.maxFloor, next);
-    emptyHands();
+    hands.dropAll();
     popups = [];
     scene.changeFloor(next, { x: W / 2, y: H - 26 });
   }
@@ -751,6 +741,7 @@ function createTowerMission(api) {
     descendSpawn: () => ({ x: DOOR.x, y: WALL_H + 26 }),
     build(scene, floor) {
       popups = [];
+      floorNow = floor;
       if (!s.active) return;
       if (floor > s.maxFloor) s.maxFloor = floor;
       if (floor === s.maxFloor) announce(floor);

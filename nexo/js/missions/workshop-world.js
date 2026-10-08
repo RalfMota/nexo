@@ -11,6 +11,7 @@
 import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
 import { drawCrankMachine, drawMineCart, drawCargoBridge, drawConverter, drawOutputTube, drawCellRack, drawEnergyCells } from '../art/mission-props.js';
 import { tileFoot, drawTag, drawArrow, addLever, addDial } from './world-kit.js';
+import { createHands } from './kit/hands.js';
 import { prefersCalm } from '../core/state.js';
 
 /* ======================================================================
@@ -178,7 +179,6 @@ const TUBE_MAX = 44;
 
 function mountPredictionWorld(api) {
   const rows = [];
-  let inHand = 0;
   let loaded = 0;
   let testsUsed = 0;
   let setIndex = 0;
@@ -194,14 +194,19 @@ function mountPredictionWorld(api) {
   const kaelEnergy = () => PREDICTION_SETS[setIndex][itemIndex];
   const record = () => api.record(['Energia', 'Saída'], rows);
 
-  const handItem = {
-    label: 'células de energia',
-    draw: (ctx) => {
-      drawEnergyCells(ctx, 0, 6, inHand);
-      drawTag(ctx, 0, -10, String(inHand));
+  const hands = createHands({
+    say: api.say,
+    limit: MAX_CELLS,
+    kinds: {
+      celula: {
+        name: 'células de energia',
+        draw: (ctx) => {
+          drawEnergyCells(ctx, 0, 6, hands.count);
+          drawTag(ctx, 0, -10, String(hands.count));
+        },
+      },
     },
-  };
-  const refreshHands = () => setCarried(inHand > 0 ? handItem : null);
+  });
 
   addQuestObject({
     id: 'cell-rack',
@@ -211,13 +216,12 @@ function mountPredictionWorld(api) {
     label: 'Estante de células de energia',
     draw: (ctx) => drawCellRack(ctx, RACK.x, RACK.y),
     onInteract: () => {
-      if (inHand + loaded >= MAX_CELLS) {
+      if (hands.count + loaded >= MAX_CELLS) {
         api.say(`O conversor aceita no máximo ${MAX_CELLS} células.`, 'warn');
         return;
       }
-      inHand++;
+      hands.take('celula');
       playAction('crouch');
-      refreshHands();
     },
   });
 
@@ -237,18 +241,15 @@ function mountPredictionWorld(api) {
       if (stage === 1) drawTag(ctx, CONVERTER.x - 6, CONVERTER.y - 92, `bilhete do Kael: ${kaelEnergy()} células`, { fill: '#fff6dc' });
     },
     onInteract: () => {
-      if (inHand > 0) {
-        loaded += inHand;
-        inHand = 0;
+      if (!hands.empty) {
+        loaded += hands.dropAll().length;
         playAction('use');
         burst(CONVERTER.x - 20, CONVERTER.y - 22, 'sparkle', 6);
-        refreshHands();
         return;
       }
       if (loaded > 0) {
         loaded--;
-        inHand++;
-        refreshHands();
+        hands.take('celula');
         return;
       }
       api.say('Pegue células na estante e traga até o conversor.', 'warn');

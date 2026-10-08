@@ -11,7 +11,8 @@ import { setBuildingHandler, potionLab } from '../engine/interiors.js';
 import { enterBuilding, exitBuilding, isInside, buildingOfKind } from '../engine/engine.js';
 import { ensureCanvasTexture } from '../engine/actor-view.js';
 import { popIn } from '../engine/fx.js';
-import { setCarried, clearQuestLayer, playAction } from '../world/quest-layer.js';
+import { clearQuestLayer, playAction } from '../world/quest-layer.js';
+import { createHands } from './kit/hands.js';
 import { drawTag } from './world-kit.js';
 import { WALL_H } from '../art/interior-art.js';
 import { cauldronSprite, fireSprite } from '../art/items.js';
@@ -53,7 +54,6 @@ function createLab(api) {
     active: true,
     won: false,
     stageIndex: 0,
-    hand: { kind: null, count: 0 },
     leaves: 0,
     dew: 0,
     mood: 'empty',
@@ -66,33 +66,36 @@ function createLab(api) {
 
   /* ---------- Mãos ---------- */
 
-  function refreshHands() {
-    if (!s.hand.count) {
-      s.hand.kind = null;
-      setCarried(null);
-      return;
+  /** Desenho das folhas ou das gotas nas mãos, com o contador. */
+  const drawIngredients = (kind) => (ctx, hands) => {
+    for (let i = 0; i < Math.min(hands.count, 5); i++) {
+      if (kind === 'leaf') {
+        ctx.fillStyle = '#2e5e2a';
+        ctx.fillRect(-8 + i * 3, -5 - (i % 2), 5, 4);
+        ctx.fillStyle = i % 2 ? '#7fd36a' : '#5aa84a';
+        ctx.fillRect(-7 + i * 3, -4 - (i % 2), 3, 2);
+      } else {
+        ctx.fillStyle = '#2b5f8a';
+        ctx.fillRect(-7 + i * 3, -6, 3, 5);
+        ctx.fillStyle = '#8fd0f5';
+        ctx.fillRect(-6 + i * 3, -5, 1, 3);
+      }
     }
-    const kind = s.hand.kind;
-    setCarried({
-      label: 'ingredientes',
-      draw: (ctx) => {
-        for (let i = 0; i < Math.min(s.hand.count, 5); i++) {
-          if (kind === 'leaf') {
-            ctx.fillStyle = '#2e5e2a';
-            ctx.fillRect(-8 + i * 3, -5 - (i % 2), 5, 4);
-            ctx.fillStyle = i % 2 ? '#7fd36a' : '#5aa84a';
-            ctx.fillRect(-7 + i * 3, -4 - (i % 2), 3, 2);
-          } else {
-            ctx.fillStyle = '#2b5f8a';
-            ctx.fillRect(-7 + i * 3, -6, 3, 5);
-            ctx.fillStyle = '#8fd0f5';
-            ctx.fillRect(-6 + i * 3, -5, 1, 3);
-          }
-        }
-        drawTag(ctx, 0, -14, `${s.hand.count} ${kind === 'leaf' ? 'folhas' : 'gotas'}`);
-      },
-    });
-  }
+    drawTag(ctx, 0, -14, `${hands.count} ${kind === 'leaf' ? 'folhas' : 'gotas'}`);
+  };
+
+  const hands = createHands({
+    say: api.say,
+    limit: MAX_IN_HAND,
+    kinds: {
+      leaf: { name: 'folhas', label: 'ingredientes', draw: drawIngredients('leaf') },
+      dew: { name: 'gotas', label: 'ingredientes', draw: drawIngredients('dew') },
+    },
+    messages: {
+      busy: (current) => `Suas mãos estão com ${current === 'leaf' ? 'folhas' : 'gotas'}. Ponha no caldeirão antes de pegar outra coisa.`,
+      full: () => 'Suas mãos estão cheias.',
+    },
+  });
 
   /* ---------- Caldeirão (no Phaser) ---------- */
 
@@ -121,30 +124,20 @@ function createLab(api) {
   }
 
   function gather(kind) {
-    if (s.hand.count && s.hand.kind !== kind) {
-      api.say(`Suas mãos estão com ${s.hand.kind === 'leaf' ? 'folhas' : 'gotas'}. Ponha no caldeirão antes de pegar outra coisa.`, 'warn');
-      return;
-    }
-    if (s.hand.count >= MAX_IN_HAND) {
-      api.say('Suas mãos estão cheias.', 'warn');
-      return;
-    }
-    s.hand = { kind, count: s.hand.count + 1 };
+    if (!hands.take(kind)) return;
     playAction('harvest');
     openCabinet(kind);
     const spot = CABINETS[kind];
     ui?.scene.fx.sparkle(spot.x, spot.y - 34, 3);
-    refreshHands();
   }
 
   function useCauldron() {
-    if (s.hand.count) {
-      if (s.hand.kind === 'leaf') s.leaves++;
+    if (!hands.empty) {
+      if (hands.kind === 'leaf') s.leaves++;
       else s.dew++;
-      s.hand = s.hand.count > 1 ? { kind: s.hand.kind, count: s.hand.count - 1 } : { kind: null, count: 0 };
+      hands.drop();
       playAction('use');
       ui?.scene.fx.sparkle(CAULDRON.x, CAULDRON.y - 22, 4);
-      refreshHands();
       setLiquid('mixing');
       return;
     }
@@ -217,8 +210,7 @@ function createLab(api) {
     s.stageIndex = index;
     s.leaves = 0;
     s.dew = 0;
-    s.hand = { kind: null, count: 0 };
-    refreshHands();
+    hands.dropAll();
     setLiquid('empty');
     api.setStage(index);
     api.setObjective(`Pedido: ${stage().order} frascos. Receita na parede: 4 folhas + 6 gotas → 2 frascos.`);
