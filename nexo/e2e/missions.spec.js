@@ -147,11 +147,15 @@ test('Grade de Energia: os cinco andares da Torre', async ({ page }) => {
   await wait(page, 2200);
   await useInside(page, 'Subir');
   await waitForFloor(page, 5);
-  // Topo: 3 hastes azuis (por módulo) e 1 dourada (de partida)
-  await useInside(page, 'Pegar haste azul', 3);
-  await useInside(page, 'Tubo da Máquina da Regra', 3, 0);
+  // Topo: primeiro uma regra errada (2 azuis e 1 dourada), depois a certa (3 e 1)
+  await useInside(page, 'Pegar haste azul', 2);
+  await useInside(page, 'Tubo da Máquina da Regra', 2, 0);
   await useInside(page, 'Pegar haste dourada');
   await useInside(page, 'Tubo da Máquina da Regra', 1, 1);
+  await useInside(page, 'Testar a regra');
+  expect(await missionDone(page, 'r5a')).toBe(false);
+  await useInside(page, 'Pegar haste azul');
+  await useInside(page, 'Tubo da Máquina da Regra', 1, 0);
   await useInside(page, 'Testar a regra');
   expect(await missionDone(page, 'r5a')).toBe(true);
   expect(errors).toEqual([]);

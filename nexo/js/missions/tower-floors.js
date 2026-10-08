@@ -540,9 +540,12 @@ function createTowerMission(api) {
     const CRATES = { cyan: { x: 56, y: 252 }, gold: { x: 360, y: 252 } };
     const LEVER = { x: MACHINE.x + 84, y: 222 };
 
+    // As lâmpadas só acendem no teste (alavanca), com a regra testada. Mexer nos tubos apaga o
+    // resultado: assim não dá para ajustar a regra olhando as lâmpadas mudarem ao vivo.
+    let tested = null; // { a, b } da regra testada por último
     const lampState = (n) => {
-      if (!s.a && !s.b) return 'off';
-      return s.a * n + s.b === rods(n) ? 'on' : 'bad';
+      if (!tested) return 'off';
+      return tested.a * n + tested.b === rods(n) ? 'on' : 'bad';
     };
     function refreshLamps(animate) {
       lamps.forEach((lamp, i) => {
@@ -561,7 +564,8 @@ function createTowerMission(api) {
           // Mãos vazias: tira uma haste do tubo
           s[which]--;
           hands.take(kind);
-          refreshLamps(true);
+          tested = null;
+          refreshLamps(false);
           return;
         }
         api.say(which === 'a'
@@ -582,7 +586,8 @@ function createTowerMission(api) {
       s[which]++;
       const tube = tubeAt(which);
       scene.fx.sparkle(tube.cx, tube.y + tube.h - s[which] * 3, 5);
-      refreshLamps(true);
+      tested = null;
+      refreshLamps(false);
     }
 
     const machine = place(scene, 'torre2:maquina-regra2', ruleMachineSprite(), MACHINE.x, MACHINE.y);
@@ -618,6 +623,9 @@ function createTowerMission(api) {
         scene.time.delayedCall(300, () => lever.setTexture('torre2:alavanca:false'));
         const floors = Array.from({ length: LAMPS }, (_, i) => i + 1);
         const hits = floors.filter((n) => s.a * n + s.b === rods(n)).length;
+        tested = { a: s.a, b: s.b };
+        s.ruleTests = (s.ruleTests ?? 0) + 1;
+        refreshLamps(true);
         api.record(['Módulos', 'Sua regra', 'Grade real'], floors.map((n) => [n, { value: s.a * n + s.b, tone: s.a * n + s.b === rods(n) ? 'good' : 'bad' }, rods(n)]));
         lamps.forEach((lamp, i) => scene.tweens.add({ targets: lamp, y: { from: LAMP_Y - 4, to: LAMP_Y }, duration: 200, delay: i * 40, ease: 'Bounce.Out' }));
         if (api.attempt(hits === LAMPS, { a: s.a, b: s.b, acertos: hits })) {
@@ -640,9 +648,9 @@ function createTowerMission(api) {
       drawTag(ctx, GRID_CX, 8, 'uma lâmpada para cada grade, de 1 a 12 módulos', { fill: '#1d1a38', ink: '#cfe0ff' });
       // Faixa escura atrás dos números (módulos e o que a regra calcula)
       ctx.fillStyle = '#4f3019';
-      ctx.fillRect(lampX(0) - 52, LAMP_Y + 3, lampX(LAMPS - 1) - lampX(0) + 64, s.a || s.b ? 22 : 11);
+      ctx.fillRect(lampX(0) - 64, LAMP_Y + 3, lampX(LAMPS - 1) - lampX(0) + 76, tested ? 22 : 11);
       ctx.fillStyle = '#1d1a38';
-      ctx.fillRect(lampX(0) - 51, LAMP_Y + 4, lampX(LAMPS - 1) - lampX(0) + 62, s.a || s.b ? 20 : 9);
+      ctx.fillRect(lampX(0) - 63, LAMP_Y + 4, lampX(LAMPS - 1) - lampX(0) + 74, tested ? 20 : 9);
       ctx.font = '700 7px "Fredoka", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -653,13 +661,13 @@ function createTowerMission(api) {
         ctx.fillText(String(n), lamp.x, LAMP_Y + 9);
         if (state !== 'off') {
           ctx.fillStyle = state === 'on' ? COLORS.good : COLORS.bad;
-          ctx.fillText(String(s.a * n + s.b), lamp.x, LAMP_Y + 19);
+          ctx.fillText(String(tested.a * n + tested.b), lamp.x, LAMP_Y + 19);
         }
       });
       ctx.fillStyle = '#8c86b4';
       ctx.textAlign = 'right';
       ctx.fillText('módulos', lampX(0) - 12, LAMP_Y + 9);
-      if (s.a || s.b) ctx.fillText('sua regra', lampX(0) - 12, LAMP_Y + 19);
+      if (tested) ctx.fillText('regra testada', lampX(0) - 12, LAMP_Y + 19);
       // Visor da máquina: a regra com os números dos tubos
       drawParts(ctx, MACHINE.x, MACHINE.y - 58, [
         ['hastes = ', COLORS.ink],
@@ -683,7 +691,8 @@ function createTowerMission(api) {
       drawTag(ctx, CRATES.cyan.x, CRATES.cyan.y - 40, 'hastes azuis', { fill: '#cfeefd' });
       drawTag(ctx, CRATES.gold.x, CRATES.gold.y - 40, 'hastes douradas', { fill: '#ffe9a0' });
       if (!s.won) {
-        drawTag(ctx, LEVER.x, LEVER.y - 34, 'testar');
+        drawTag(ctx, LEVER.x, LEVER.y - 34, s.ruleTests ? `testar (${s.ruleTests} ${s.ruleTests === 1 ? 'teste' : 'testes'})` : 'testar');
+        if (!tested) drawTag(ctx, GRID_CX, LAMP_Y - 24, 'as lâmpadas acendem quando você testa a regra', { fill: '#1d1a38', ink: '#9a93c4' });
         if (hands.holds('cyan')) drawArrow(ctx, tubeAt('a').cx, MACHINE.y - 72, t);
         if (hands.holds('gold')) drawArrow(ctx, tubeAt('b').cx, MACHINE.y - 72, t);
       } else {
@@ -714,7 +723,7 @@ function createTowerMission(api) {
       api.setObjective('Quantas hastes tem a grade de 10 módulos? Use o quadro do registro, carregue o carrinho com feixes de 10 e hastes soltas e puxe a alavanca.');
     } else {
       api.setStage(2);
-      api.setObjective('Monte a regra na Máquina: hastes azuis no tubo "por módulo" e douradas no tubo "de partida". Deixe as 12 lâmpadas verdes e puxe a alavanca para testar.');
+      api.setObjective('Monte a regra na Máquina: hastes azuis no tubo "por módulo" e douradas no tubo "de partida". Puxe a alavanca para testar: as lâmpadas mostram em quais grades a regra acerta. Pense antes de testar!');
     }
   }
 
@@ -786,7 +795,7 @@ export default {
     hints: [
       'Olhe a conta embaixo da grade: ela começa com 1 (a haste dourada) e cada módulo fechado soma mais 3 (as azuis).',
       'Para 10 módulos: 1 haste dourada + 3 azuis para cada um dos 10 módulos. Um feixe tem 10 hastes: quantos feixes e quantas soltas isso dá?',
-      'No topo, o tubo azul guarda o "3 de cada módulo" e o tubo dourado guarda o "1 de partida". As lâmpadas verdes mostram as grades em que a sua regra já acerta.',
+      'No topo, o tubo azul guarda o "3 de cada módulo" e o tubo dourado guarda o "1 de partida". Cada teste acende as lâmpadas: verdes onde a regra acerta, vermelhas onde erra. Use o Registro dos andares para pensar antes de testar de novo.',
     ],
     mountWorld: mountTowerFloors,
   },
