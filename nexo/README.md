@@ -19,13 +19,17 @@ As músicas ficam na pasta `audio/` e tocam em sequência, na ordem da lista `TR
 
 ## Controles
 
-| Ação | Teclado | Mouse / toque |
-|---|---|---|
-| Andar | WASD ou setas | clicar no destino / direcional na tela |
-| Conversar, interagir | E (ou Espaço) | clicar no personagem / botão E |
-| Mapa, Diário, Itens | M, J, I | barra inferior |
-| Calculador, Compasso | C, Q | barra inferior |
-| Pausa | Esc | botão Menu |
+| Ação | Teclado | Mouse / toque | Controle de videogame |
+|---|---|---|---|
+| Andar | WASD ou setas | clicar no destino / direcional na tela | direcional ou alavanca esquerda |
+| Conversar, interagir | E (ou Espaço, Enter) | clicar no personagem / botão E | A ou X |
+| Mapa, Diário, Itens, Códice | M, J, I, K | barra inferior | |
+| Calculador, Compasso | C, Q | barra inferior | |
+| Pausa | Esc | botão Menu | |
+
+**Som e acessibilidade (Opções):** efeitos sonoros sintetizados no navegador (pegar, encaixar, alavanca, acerto, erro, vitória, porta; sem arquivos de terceiros), com volume próprio; **legendas dos sons** (um aviso escrito a cada som, lido por leitores de tela); **alto contraste** (painéis pretos com borda branca, texto branco, foco amarelo e etiquetas do mapa em branco e preto); texto maior e animações reduzidas. O controle de videogame também serve a controles adaptados.
+
+**Códice das Leis do Nexo (tecla K):** cada regra descoberta numa missão (partes do lago, receita do Orin, desconto, máquina de produção, conversor, rotas, grade de energia, Núcleo) entra no Códice e vira ferramenta: o aluno dá uma entrada e a lei calcula a saída, no Códice ou no Calculador Arcano. Cada uso é registrado como `calculator_use { lei, entrada }`. O Códice também guarda o **Diário da Ruptura**: uma página aparece a cada região reconectada e, juntas, contam quem rompeu o Núcleo (Vesper, um aprendiz que tentava adivinhar um número em vez de descobrir a regra). Leis e páginas ficam em `js/data/codex.js`.
 
 ## Regiões e missões
 

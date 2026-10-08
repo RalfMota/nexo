@@ -12,6 +12,7 @@ import { state, saveState } from '../core/state.js';
 import { runtime } from '../core/runtime.js';
 import { logEvent } from '../core/research-log.js';
 import { playSfx } from '../core/sfx.js';
+import { LAWS, PAGES } from '../data/codex.js';
 import { openMissionView } from '../ui/mission-view.js';
 import { openQuestTracker } from '../ui/quest-tracker.js';
 import { closeModal } from '../ui/modal.js';
@@ -138,6 +139,8 @@ function win(session, message) {
   const sup = session.hints === 0 ? 'autonomo' : session.hints >= 3 ? 'apoio' : 'dicas';
   const sec = Math.round((Date.now() - session.t0) / 1000);
   const previous = state.done[session.id];
+  const law = !previous && LAWS.find((item) => item.mission === session.id);
+  if (law) setTimeout(() => showToast('Nova lei no Códice:', `${law.title} (tecla K)`, 5000), 1800);
   if (previous) {
     previous.reps++;
     logEvent('retry', { rep: previous.reps, sup });
@@ -157,6 +160,8 @@ function win(session, message) {
 }
 
 function announceRegion(region) {
+  const page = PAGES.find((item) => item.region === region.id);
+  if (page) setTimeout(() => showToast('Nova página no Diário da Ruptura:', `${page.title} (tecla K)`, 6000), 3200);
   if (region.id === 'f') {
     showToast('Núcleo do Nexo religado!', 'Todas as regiões voltaram a se conectar.', 6000);
     return;

@@ -13,6 +13,7 @@ export const TOOLS = [
   { action: 'map', key: 'M', label: 'Mapa', icon: ICONS.map },
   { action: 'journal', key: 'J', label: 'Diário', icon: ICONS.journal },
   { action: 'items', key: 'I', label: 'Itens', icon: ICONS.items },
+  { action: 'codex', key: 'K', label: 'Códice', icon: ICONS.codex },
   { action: 'calculator', key: 'C', label: 'Calcular', icon: ICONS.calculator, needs: 'Calculador Arcano' },
   { action: 'compass', key: 'Q', label: 'Compasso', icon: ICONS.compass, needs: 'Compasso de Nexo' },
   { action: 'menu', key: 'Esc', label: 'Menu', icon: ICONS.menu },

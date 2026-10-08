@@ -516,3 +516,15 @@
 .quest-tracker__fold:hover { background: rgba(255, 255, 255, .16); }
 .quest-tracker.is-collapsed .quest-tracker__fold { transform: rotate(-90deg); }
 .quest-tracker.is-collapsed > :not(.quest-tracker__head):not(.quest-tracker__stages):not(.quest-tracker__objective) { display: none; }
+
+/* Códice das Leis */
+.codex { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 760px) { .codex { grid-template-columns: minmax(0, 1fr); } }
+.codex-laws { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.codex-law { display: grid; gap: 4px; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, .06); border: 1px solid var(--glass-edge); }
+.codex-law code { font: 600 .9rem var(--font-display); color: var(--crystal); }
+.codex-law input { width: 6em; }
+.codex-law output { color: var(--gold); }
+.codex-law.is-locked { opacity: .6; }
+.codex details { margin: 6px 0; }
+.codex details p { margin: 4px 0 0; font-style: italic; }

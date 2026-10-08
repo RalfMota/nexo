@@ -13,10 +13,11 @@ import { openModal, closeModal, isModalOpen } from './modal.js';
 import { openMapView } from './map-view.js';
 import { openJournal } from './journal.js';
 import { toggleCalculator, closeCalculator, toggleCompass, openInventory } from './tools.js';
+import { openCodex } from './codex.js';
 import { accessibilityMarkup, bindAccessibility } from './options.js';
 import { showTitle } from './title-screen.js';
 
-const SHORTCUTS = { m: 'map', j: 'journal', i: 'items', c: 'calculator', q: 'compass', escape: 'menu' };
+const SHORTCUTS = { m: 'map', j: 'journal', i: 'items', k: 'codex', c: 'calculator', q: 'compass', escape: 'menu' };
 
 let onShortcut = null;
 let stopWeatherLabel = null;
@@ -79,6 +80,8 @@ function runAction(action) {
       return openJournal();
     case 'items':
       return openInventory();
+    case 'codex':
+      return openCodex();
     case 'calculator':
       return hasItem('Calculador Arcano') && toggleCalculator();
     case 'compass':
@@ -105,7 +108,7 @@ function openPauseMenu() {
         <p class="small">
           <b>WASD</b> ou <b>setas</b>: andar · <b>clique</b> ou <b>toque</b>: andar até o ponto ·
           <b>E</b>: conversar e interagir · <b>M</b>: mapa · <b>J</b>: diário · <b>I</b>: itens ·
-          <b>C</b>: calculador · <b>Q</b>: compasso · <b>Esc</b>: pausa
+          <b>K</b>: Códice das Leis · <b>C</b>: calculador · <b>Q</b>: compasso · <b>Esc</b>: pausa
         </p>
       </div>`,
   });

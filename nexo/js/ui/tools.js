@@ -7,10 +7,12 @@ import { countCalculatorUse } from '../game/session.js';
 import { openModal } from './modal.js';
 import { refreshHud } from './hud.js';
 import { ICONS } from './icons.js';
+import { unlockedLaws, applyLaw } from './codex.js';
+import { escapeHtml } from '../core/dom.js';
 
 const ITEMS = {
   'Compasso de Nexo': { icon: ICONS.compass, text: 'Destaca o que pode ser tocado, no mundo e nas missões. Tecla Q.' },
-  'Calculador Arcano': { icon: ICONS.calculator, text: 'Faz as quatro operações. Tecla C.' },
+  'Calculador Arcano': { icon: ICONS.calculator, text: 'Faz as quatro operações e usa as leis do Códice. Tecla C.' },
 };
 
 let calculator = null;
@@ -31,6 +33,7 @@ export function toggleCalculator() {
         <button type="button" class="btn btn--crystal btn--small" id="calc-go">=</button>
         <output id="calc-out" aria-live="polite">—</output>
       </div>
+      ${lawsRow()}
     </section>`);
   (qs('.game') ?? document.body).appendChild(calculator);
 
@@ -47,7 +50,30 @@ export function toggleCalculator() {
   qs('#calc-go', calculator).addEventListener('click', compute);
   qs('#calc-b', calculator).addEventListener('keydown', (event) => event.key === 'Enter' && compute());
   qs('[data-role="close"]', calculator).addEventListener('click', closeCalculator);
+  const lawSelect = qs('#calc-law', calculator);
+  if (lawSelect) {
+    const runLaw = () => {
+      const law = unlockedLaws().find((item) => item.id === lawSelect.value);
+      const value = qs('#calc-law-in', calculator).value;
+      qs('#calc-law-out', calculator).textContent = law && value !== '' ? applyLaw(law, value) : '—';
+    };
+    qs('#calc-law-go', calculator).addEventListener('click', runLaw);
+    qs('#calc-law-in', calculator).addEventListener('keydown', (event) => event.key === 'Enter' && runLaw());
+  }
   qs('#calc-a', calculator).focus();
+}
+
+/** Linha "usar uma lei" do Calculador (só aparece depois da primeira lei descoberta). */
+function lawsRow() {
+  const laws = unlockedLaws();
+  if (!laws.length) return '';
+  return `
+      <div class="row">
+        <select id="calc-law" aria-label="Lei do Códice">${laws.map((law) => `<option value="${law.id}">${escapeHtml(law.title)}: ${escapeHtml(law.rule)}</option>`).join('')}</select>
+        <input id="calc-law-in" type="number" step="any" min="0" aria-label="Entrada da lei">
+        <button type="button" class="btn btn--crystal btn--small" id="calc-law-go">usar a lei</button>
+        <output id="calc-law-out" aria-live="polite">—</output>
+      </div>`;
 }
 
 export function closeCalculator() {

@@ -294,3 +294,26 @@ test('Arquivo da Torre: o selo roda a regra linha por linha e depois prevê', as
   expect(await missionDone(page, 'r5b')).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('Códice: lei descoberta vira ferramenta (Códice e Calculador Arcano)', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    const st = await import('/js/core/state.js');
+    st.state.done.r3a = { sup: 'autonomo', tries: 2, hints: 0, sec: 90, reps: 0 };
+    st.state.inv = ['Compasso de Nexo', 'Calculador Arcano'];
+    st.saveState();
+  });
+  await page.keyboard.press('k');
+  const law = page.locator('[data-law="producao"]');
+  await expect(law).toBeVisible();
+  await expect(page.locator('.codex-law.is-locked')).toHaveCount(7);
+  await law.locator('input').fill('8');
+  await law.locator('button').click();
+  await expect(law.locator('output')).toHaveText('24 cristais');
+  await page.keyboard.press('Escape');
+  await page.evaluate(async () => (await import('/js/ui/tools.js')).toggleCalculator());
+  await page.locator('#calc-law-in').fill('20');
+  await page.locator('#calc-law-go').click();
+  await expect(page.locator('#calc-law-out')).toHaveText('60 cristais');
+  expect(errors).toEqual([]);
+});

@@ -4,6 +4,11 @@ const svg = (content) =>
   `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">${content}</svg>`;
 
 export const ICONS = {
+  codex: svg(`
+    <path fill="#5a3fc4" d="M2 2h11v12H2z"/>
+    <path fill="#8d6bff" d="M3 3h9v10H3z"/>
+    <path fill="#f4f0ff" d="M4 4h7v1H4zM4 6h5v1H4zM4 8h6v1H4z"/>
+    <path fill="#ffc35a" d="M13 2h1v12h-1zM8 10h3v2H8z"/>`),
   map: svg(`
     <path fill="#e9d8a6" d="M1 3h4v11H1zM6 2h4v11H6zM11 3h4v11h-4z"/>
     <path fill="#c49c63" d="M5 3h1v11H5zM10 2h1v11h-1z"/>
