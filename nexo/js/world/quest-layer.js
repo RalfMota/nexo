@@ -13,6 +13,7 @@
  */
 
 import { prefersCalm } from '../core/state.js';
+import { playSfx } from '../core/sfx.js';
 
 const objects = new Map();
 const particles = [];
@@ -94,7 +95,8 @@ export function setActionPlayer(play) {
  * Animação de ação do jogador: 'dig' (cavar), 'harvest' (agachar até o chão),
  * 'use' (mexer em algo à frente) ou 'lift' (pegar e erguer). "crouch" é sinônimo de "harvest".
  */
-export function playAction(name = 'harvest') {
+export function playAction(name = 'harvest', { silent = false } = {}) {
+  if (!silent) playSfx(name === 'use' ? 'usar' : name === 'dig' ? 'cavar' : 'pegar');
   actionPlayer?.(name === 'crouch' ? 'harvest' : name);
 }
 

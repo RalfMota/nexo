@@ -6,6 +6,7 @@
  * andar, coloca objetos, pontos de interação e desenha suas etiquetas.
  */
 
+import { playSfx } from '../core/sfx.js';
 import Phaser from './phaser.js';
 import { engineState } from './engine-state.js';
 import { CanvasLayer } from './canvas-layer.js';
@@ -194,6 +195,7 @@ export class InteriorScene extends Phaser.Scene {
 
   /** Sai do prédio (volta ao mapa, em frente à porta) ou desce um andar, conforme a missão. */
   leave({ toWorld = false } = {}) {
+    if (!engineState.transitioning) playSfx('porta');
     if (engineState.transitioning) return;
     const below = toWorld ? null : this.handler?.floorBelow?.(this.floor);
     if (below != null) {

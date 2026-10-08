@@ -11,6 +11,7 @@ import { CHARACTERS } from '../data/characters.js';
 import { state, saveState } from '../core/state.js';
 import { runtime } from '../core/runtime.js';
 import { logEvent } from '../core/research-log.js';
+import { playSfx } from '../core/sfx.js';
 import { openMissionView } from '../ui/mission-view.js';
 import { openQuestTracker } from '../ui/quest-tracker.js';
 import { closeModal } from '../ui/modal.js';
@@ -102,6 +103,7 @@ function createMissionApi(session) {
 
 function attempt(session, ok, data) {
   session.tries++;
+  playSfx(ok ? 'acerto' : 'erro');
   logEvent('attempt', { n: session.tries, ok, ...data });
   statAttempt(session.id, Boolean(ok), session.stage);
   return ok;
@@ -130,6 +132,7 @@ function win(session, message) {
   const mission = MISSIONS[session.id];
   const region = regionById(mission.region);
   const regionWasDone = isRegionDone(region);
+  setTimeout(() => playSfx('vitoria'), 350);
 
   session.done = true;
   const sup = session.hints === 0 ? 'autonomo' : session.hints >= 3 ? 'apoio' : 'dicas';

@@ -11,6 +11,7 @@
  * canvas (chão e topo), por cima/abaixo dos objetos do Phaser.
  */
 
+import { playSfx } from '../core/sfx.js';
 import Phaser from './phaser.js';
 import { engineState, worldZoom } from './engine-state.js';
 import { CanvasLayer } from './canvas-layer.js';
@@ -391,6 +392,7 @@ export class WorldScene extends Phaser.Scene {
 
   enterBuilding(building, options = {}) {
     if (engineState.transitioning) return;
+    playSfx('porta');
     engineState.transitioning = true;
     this.mover.stop();
     this.cameras.main.fade(320, 18, 15, 42, true);
