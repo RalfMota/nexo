@@ -89,7 +89,7 @@ O mundo roda no **Phaser 3.90** (`vendor/phaser.esm.min.js`, licença MIT em `ve
 | `player.js` | estado do jogador entre as cenas, corpo físico (caixa de 14 × 7 px nos pés), movimento, clicar para andar |
 | `actor-view.js` | personagem como sprite do Phaser (a pixel art continua vindo de `art/sprite.js`) com sombra e squash and stretch |
 | `fx.js` | partículas do Phaser (brilho e terra) e o efeito de **brotar** (tween com quique) |
-| `canvas-layer.js` | camadas de canvas do tamanho da tela para o que ainda é pintado com a API de canvas (água, grama, objetos das missões no mapa, etiquetas, chuva, luz); os textos ficam nítidos |
+| `canvas-layer.js` | camadas de canvas do tamanho da tela para o que ainda é pintado com a API de canvas (água, grama, objetos das missões no mapa, etiquetas, chuva, luz); os textos ficam nítidos. Três camadas no mundo: chão (abaixo dos personagens), frente (objetos de missão mais abaixo que o jogador, com profundidade igual aos pés dele, para que máquinas altas o cubram quando ele passa por trás) e topo |
 
 **Entrar num prédio:** perto da porta, aperte **E**: a tela escurece (fade), o interior carrega e clareia. Para sair, ande pelo vão da porta de baixo ou aperte E nela. Na Torre, durante a Grade de Energia, a porta de cima leva ao andar seguinte e a de baixo desce um andar.
 
@@ -216,6 +216,10 @@ Os eventos ficam no **IndexedDB** do navegador (banco `nexo_registros`, `js/core
 
 **Opções > Apagar meu progresso** (tela de título do aluno) zera o progresso daquele aluno (os registros de pesquisa continuam). **Apagar todos os dados** (Painel do Professor) remove todos os alunos, registros e a senha. Com `index.html?debug=1` aparece o botão que libera todas as regiões, **só no servidor local** (localhost); no site publicado o parâmetro é ignorado. Se um aluno tiver regiões liberadas assim, o Painel do Professor mostra o aviso ⚠ "modo de teste".
 
-**Testes:** `npm test` roda os testes das rotas da turma online (`tests/api.test.js`), com o armazenamento da Vercel simulado em memória.
+**Testes:**
+- `npm test`: testes de unidade (rotas da turma online com a Vercel Blob simulada em memória, e o componente de mãos das missões), em `tests/`.
+- `npm run test:e2e`: testes de ponta a ponta com Playwright (`e2e/`), no Chrome já instalado (ou no Edge, com `NEXO_BROWSER=msedge`), sem baixar navegadores. Abrem o jogo servido pelo Vite e jogam por script: todas as missões montam sem erro, e Prólogo, Comportas do Vale, Previsão, Caldeirão de Orin e a Torre são jogados do início ao fim, com tentativas erradas no meio. Rode antes de cada publicação.
+
+**Renderizador:** o padrão é o Canvas 2D do Phaser. `?render=webgl` (ou `?render=canvas`) troca para comparar: na medição feita, o WebGL ficou mais lento (16,3 ms contra ~9 ms por quadro) porque as camadas de canvas de tela inteira são reenviadas à placa de vídeo a cada quadro.
 
 Os dados do Diário são indícios situados, não nota nem diagnóstico. O uso com estudantes depende de autorização institucional, consentimento dos responsáveis e assentimento dos participantes.
