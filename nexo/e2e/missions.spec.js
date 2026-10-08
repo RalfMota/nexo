@@ -270,3 +270,27 @@ test('Reacender o Núcleo: testes, gráfico pelos próprios pontos e energia 50'
   expect(await missionDone(page, 'f1')).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('Arquivo da Torre: o selo roda a regra linha por linha e depois prevê', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r5b');
+  // Regra errada no primeiro selo (2 × ciclos): o selo para na primeira linha
+  await useObject(page, 'seal-a-up', 2);
+  await useObject(page, 'seal-lever');
+  await wait(page, 3200);
+  expect(await missionDone(page, 'r5b')).toBe(false);
+  await useObject(page, 'seal-a-up'); // 3 × ciclos
+  await useObject(page, 'seal-lever');
+  await wait(page, 2800);
+  for (const [a, b] of [[2, 4], [2, 15]]) { // saída = 2 × energia + 4; custo = 2 × distância + 15
+    await useObject(page, 'seal-a-up', a);
+    await useObject(page, 'seal-b-up', b);
+    await useObject(page, 'seal-lever');
+    await wait(page, 2800);
+  }
+  expect(await missionDone(page, 'r5b')).toBe(true);
+  expect(errors).toEqual([]);
+});
