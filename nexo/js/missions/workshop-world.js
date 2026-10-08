@@ -21,7 +21,7 @@ const BRIDGE_LOAD = 24;
 const PER_CYCLE = 3;
 const MAX_CYCLES = 10;
 const MACHINE = tileFoot(22, 8);
-const CART_HOME = { x: MACHINE.x + 36, y: MACHINE.y + 2 };
+const CART_HOME = { x: MACHINE.x + 50, y: MACHINE.y + 2 }; // embaixo da calha de saída
 const BRIDGE = { x: 33 * 32, y: 10 * 32 + 30 }; // entre a estrada e o poste (35, 9)
 
 function mountProductionWorld(api) {
@@ -57,7 +57,7 @@ function mountProductionWorld(api) {
     draw: (ctx, t) => {
       clock = t;
       drawCrankMachine(ctx, MACHINE.x, MACHINE.y, t, t < spinUntil);
-      drawTag(ctx, MACHINE.x, MACHINE.y - 52, `ciclos: ${cycles}`, { fill: '#1d1a38', ink: '#7ff0e0' });
+      drawTag(ctx, MACHINE.x, MACHINE.y - 82, `ciclos: ${cycles}`, { fill: '#1d1a38', ink: '#7ff0e0' });
     },
     onInteract: useMachine,
   });
@@ -169,7 +169,7 @@ const MAX_CELLS = 10;
 const convert = (energy) => 2 * energy + 4;
 const PREDICTION_SETS = [[9, 14, 6, 11, 17], [7, 12, 15, 8, 16]];
 const CONVERTER = tileFoot(36, 7);
-const TUBE = { x: CONVERTER.x + 27, y: CONVERTER.y };
+const TUBE = { x: CONVERTER.x + 36, y: CONVERTER.y - 2 };
 const TEST_LEVER = tileFoot(38, 7);
 const RACK = tileFoot(34, 10);
 const DIAL = { x: 37 * 32 + 16, y: 10 * 32 + 26 };
@@ -232,16 +232,16 @@ function mountPredictionWorld(api) {
       output += (outputTarget - output) * Math.min(1, (1 / 60) * 3);
       drawConverter(ctx, CONVERTER.x, CONVERTER.y, t, t < activeUntil);
       drawOutputTube(ctx, TUBE.x, TUBE.y, output, TUBE_MAX, predicted);
-      drawTag(ctx, CONVERTER.x - 12, CONVERTER.y - 50, `entrada: ${loaded}`, { fill: '#1d1a38', ink: '#7ff0e0' });
-      drawTag(ctx, TUBE.x + 8, TUBE.y - 64, `saída: ${Math.round(output)}`, { fill: '#1d1a38', ink: '#7ff0e0' });
-      if (stage === 1) drawTag(ctx, CONVERTER.x - 6, CONVERTER.y - 78, `bilhete do Kael: ${kaelEnergy()} células`, { fill: '#fff6dc' });
+      drawTag(ctx, CONVERTER.x - 26, CONVERTER.y - 38, `entrada: ${loaded}`, { fill: '#1d1a38', ink: '#7ff0e0' });
+      drawTag(ctx, TUBE.x + 4, TUBE.y - 78, `saída: ${Math.round(output)}`, { fill: '#1d1a38', ink: '#7ff0e0' });
+      if (stage === 1) drawTag(ctx, CONVERTER.x - 6, CONVERTER.y - 92, `bilhete do Kael: ${kaelEnergy()} células`, { fill: '#fff6dc' });
     },
     onInteract: () => {
       if (inHand > 0) {
         loaded += inHand;
         inHand = 0;
         playAction('use');
-        burst(CONVERTER.x - 17, CONVERTER.y - 6, 'sparkle', 6);
+        burst(CONVERTER.x - 20, CONVERTER.y - 22, 'sparkle', 6);
         refreshHands();
         return;
       }

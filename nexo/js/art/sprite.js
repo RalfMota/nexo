@@ -86,6 +86,66 @@ class PixelGrid {
     for (let y = y0; y <= y1; y++) this.set(x, y, color);
   }
 
+  /**
+   * Passe de volume: cada trecho contínuo da silhueta (tronco, braço, perna, cabeça) é
+   * sombreado como um cilindro, com a luz vindo de cima e da esquerda. Os pixels da borda
+   * iluminada ganham um fio de luz (rim light) e os da borda oposta escurecem para o roxo,
+   * como sombra própria. Cores muito escuras (olhos, contornos internos) quase não mudam.
+   */
+  volume(strength = 1, mirrored = false) {
+    const side = mirrored ? -1 : 1; // o perfil "left" é espelhado depois: a luz continua vindo da esquerda da tela
+    const src = this.cells.slice();
+    const at = (x, y) => (x < 0 || y < 0 || x >= GRID_W || y >= GRID_H ? null : src[y * GRID_W + x]);
+    const across = new Float32Array(GRID_W * GRID_H);
+    const down = new Float32Array(GRID_W * GRID_H);
+    // Posição de cada pixel dentro do seu trecho horizontal (-1 à esquerda, 1 à direita)
+    for (let y = 0; y < GRID_H; y++) {
+      let x = 0;
+      while (x < GRID_W) {
+        if (!at(x, y)) {
+          x++;
+          continue;
+        }
+        const start = x;
+        while (x < GRID_W && at(x, y)) x++;
+        const end = x - 1;
+        for (let i = start; i <= end; i++) across[y * GRID_W + i] = end > start + 1 ? ((i - start) / (end - start)) * 2 - 1 : 0;
+      }
+    }
+    // E dentro do trecho vertical (-1 em cima, 1 embaixo)
+    for (let x = 0; x < GRID_W; x++) {
+      let y = 0;
+      while (y < GRID_H) {
+        if (!at(x, y)) {
+          y++;
+          continue;
+        }
+        const start = y;
+        while (y < GRID_H && at(x, y)) y++;
+        const end = y - 1;
+        for (let j = start; j <= end; j++) down[j * GRID_W + x] = end > start + 1 ? ((j - start) / (end - start)) * 2 - 1 : 0;
+      }
+    }
+    for (let y = 0; y < GRID_H; y++) {
+      for (let x = 0; x < GRID_W; x++) {
+        const color = at(x, y);
+        if (!color) continue;
+        const [r, g, b] = toRgb(color);
+        const luminance = (r * 0.3 + g * 0.59 + b * 0.11) / 255;
+        if (luminance < 0.16) continue; // olhos, sobrancelhas, linhas escuras
+        const index = y * GRID_W + x;
+        let light = -0.62 * side * across[index] - 0.22 * down[index];
+        const litEdge = !at(x - side, y) || !at(x, y - 1);
+        const darkEdge = !at(x + side, y) || !at(x, y + 1);
+        if (litEdge && !darkEdge) light += 0.35;
+        if (darkEdge && !litEdge) light -= 0.3;
+        const amount = Math.min(0.42, Math.abs(light) * 0.3 * strength);
+        if (amount < 0.03) continue;
+        this.cells[index] = light > 0 ? mix(color, '#fff3d6', amount) : mix(color, '#2a1d4a', amount);
+      }
+    }
+  }
+
   /** Contorno colorido em volta de tudo o que foi pintado. */
   outline() {
     const source = this.cells.slice();
@@ -942,6 +1002,7 @@ function paintSprite(look, dir, pose) {
     if (pose.arms === 'raised' || pose.arms === 'tool-up') armsFront(g, L, pose, y0);
   }
   accessory(g, L, view, top, y0);
+  g.volume(1, dir === 'left');
   g.outline();
   // O perfil é desenhado virado para a direita; "left" é o espelho
   return g.toCanvas(dir === 'left');

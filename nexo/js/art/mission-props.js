@@ -36,54 +36,154 @@ function rivet(pix, x, y) {
 
 /* ---------- Máquina de cristais com manivela (Oficina) ---------- */
 
-function buildCrankMachine(frame) {
-  const pix = new Pix(40, 46);
-  // Pés e corpo
-  pix.rect(5, 42, 4, 3, IRON.t[1], IRON.o);
-  pix.rect(25, 42, 4, 3, IRON.t[1], IRON.o);
-  pix.box(3, 8, 28, 35, METAL, { top: 4, light: 0.75, grain: 3 });
-  for (const [rx, ry] of [[5, 13], [28, 13], [5, 40], [28, 40]]) rivet(pix, rx, ry);
-  // Visor com engrenagens (girando conforme o quadro)
-  pix.rect(7, 15, 20, 14, SCREEN.t[1], SCREEN.o);
-  const gear = (cx, cy, r, phase, R) => {
-    for (let y = cy - r - 1; y <= cy + r + 1; y++) {
-      for (let x = cx - r - 1; x <= cx + r + 1; x++) {
-        const dx = x + 0.5 - cx;
-        const dy = y + 0.5 - cy;
-        const d = Math.hypot(dx, dy);
-        const tooth = Math.cos(Math.atan2(dy, dx) * 6 + phase) > 0.2 ? 1 : 0;
-        if (d <= r - 1.5 && d > 1) pix.set(x, y, toneOf(lightOf(dx / r, dy / r, 0.7), x, y, R));
-        else if (d <= r - 0.5 + tooth) pix.set(x, y, R.t[2]);
-      }
+const CAST = customRamp('#14101c', ['#24202f', '#3a3548', '#57516a', '#7a7494', '#a9a3c4']);
+const COPPER = ramp('#c8743a');
+const AMBER = ['#3a1c08', '#7a3a0e', '#c86a1a', '#ffb43a', '#ffe08a'];
+const PURPLE_CRYSTAL = ramp('#b48cff');
+
+/** Painel chanfrado: borda clara em cima/à esquerda, escura embaixo/à direita, rebites nos cantos. */
+function panel(pix, x0, y0, w, h, R, { rivets = true, light = 0.62 } = {}) {
+  for (let y = y0; y < y0 + h; y++) {
+    for (let x = x0; x < x0 + w; x++) {
+      const top = y === y0 || x === x0;
+      const bottom = y === y0 + h - 1 || x === x0 + w - 1;
+      let level = light - ((x - x0) / w) * 0.18 - ((y - y0) / h) * 0.12 + (noise(x, y, 31) - 0.5) * 0.06;
+      if (top) level += 0.28;
+      if (bottom) level -= 0.3;
+      pix.set(x, y, toneOf(level, x, y, R), R.o);
     }
-    pix.set(cx, cy, SCREEN.t[0]);
+  }
+  if (rivets) {
+    for (const [rx, ry] of [[x0 + 2, y0 + 2], [x0 + w - 3, y0 + 2], [x0 + 2, y0 + h - 3], [x0 + w - 3, y0 + h - 3]]) {
+      pix.set(rx, ry, R.t[4]);
+      pix.set(rx + 1, ry + 1, R.t[0]);
+    }
+  }
+}
+
+function ring(pix, cx, cy, r0, r1, paint) {
+  for (let y = Math.floor(cy - r1 - 1); y <= cy + r1 + 1; y++) {
+    for (let x = Math.floor(cx - r1 - 1); x <= cx + r1 + 1; x++) {
+      const dx = x + 0.5 - cx;
+      const dy = y + 0.5 - cy;
+      const d = Math.hypot(dx, dy);
+      if (d >= r0 && d <= r1) paint(x, y, dx, dy, d);
+    }
+  }
+}
+
+function buildCrankMachine(frame) {
+  const pix = new Pix(70, 74);
+  const cx = 34;
+  // Pés e base com faixa de atenção
+  for (const fx of [12, 50]) {
+    pix.rect(fx, 68, 8, 5, CAST.t[1], CAST.o);
+    pix.rect(fx, 68, 8, 1, CAST.t[3]);
+  }
+  panel(pix, 8, 60, 54, 9, CAST, { light: 0.45 });
+  for (let x = 10; x < 60; x++) for (let y = 62; y < 66; y++) pix.set(x, y, Math.floor((x + y) / 3) % 2 ? '#f2b84b' : '#2b2b33');
+  // Corpo: gabinete com o topo arredondado
+  for (let y = 16; y < 61; y++) {
+    for (let x = 10; x < 60; x++) {
+      const corner = y < 22 ? ((x < 16 ? (16 - x) : x > 53 ? x - 53 : 0) ** 2 + (22 - y) ** 2) > 36 : false;
+      if (corner) continue;
+      const nx = ((x - 10) / 50) * 2 - 1;
+      const level = lightOf(nx, y < 24 ? -0.6 : 0, 0.75) + (noise(x, y, 12) - 0.5) * 0.06;
+      pix.set(x, y, toneOf(level, x, y, CAST, { min: 1 }), CAST.o);
+    }
+  }
+  // Emendas de painéis e rebites
+  for (const sy of [30, 48]) for (let x = 11; x < 59; x++) {
+    pix.set(x, sy, CAST.t[1]);
+    pix.set(x, sy + 1, CAST.t[3]);
+  }
+  for (let x = 13; x < 58; x += 7) for (const ry of [18, 33, 51, 58]) {
+    pix.set(x, ry, CAST.t[4]);
+    pix.set(x + 1, ry + 1, CAST.t[0]);
+  }
+  // Escotilha redonda com as engrenagens em luz âmbar
+  ring(pix, cx, 40, 0, 10.5, (x, y, dx, dy, d) => pix.set(x, y, AMBER[Math.max(0, Math.min(4, Math.round(3.4 - d / 3.5 - dy / 12)))]));
+  const gear = (gx, gy, r, phase, R) => {
+    ring(pix, gx, gy, 1.2, r + 1.4, (x, y, dx, dy, d) => {
+      const tooth = Math.cos(Math.atan2(dy, dx) * 7 + phase) > 0.25;
+      if (d <= r - 0.4 || (tooth && d <= r + 1.4)) pix.set(x, y, toneOf(lightOf(dx / r, dy / r, 0.6), x, y, R));
+    });
+    pix.set(Math.floor(gx), Math.floor(gy), AMBER[0]);
   };
-  gear(14, 22, 5, frame * 0.6, BRASS);
-  gear(22, 19, 3, -frame * 1.1, ramp('#c97a2a'));
-  // Contador e fenda da fita
-  pix.rect(9, 31, 16, 5, SCREEN.t[0], SCREEN.o);
-  pix.rect(10, 37, 14, 2, IRON.t[0]);
-  // Calha de saída (para a direita, onde fica o carrinho)
-  pix.line(31, 30, 37, 36, STEEL.t[3], STEEL.o);
-  pix.line(31, 31, 37, 37, STEEL.t[1], STEEL.o);
-  // Manivela na lateral esquerda
+  gear(cx - 3, 42, 5, frame * 0.45, BRASS);
+  gear(cx + 5, 36, 3, -frame * 0.8, COPPER);
+  ring(pix, cx, 40, 10.5, 13, (x, y, dx, dy, d) => pix.set(x, y, toneOf(lightOf(dx / d, dy / d, 0.4) + (d < 11.5 ? -0.25 : 0.05), x, y, BRASS), BRASS.o));
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    pix.set(Math.round(cx - 0.5 + Math.cos(a) * 11.8), Math.round(39.5 + Math.sin(a) * 11.8), BRASS.t[4]);
+  }
+  pix.set(cx - 6, 33, '#fff6c8');
+  pix.set(cx - 5, 32, '#fff6c8');
+  // Manômetro com ponteiro e luzes de aviso
+  ring(pix, 52, 24, 0, 4.2, (x, y, dx, dy, d) => pix.set(x, y, d > 3.2 ? BRASS.t[d > 3.8 ? 1 : 3] : '#f4ecdc', BRASS.o));
+  const needle = -2.2 + frame * 0.35;
+  pix.line(52, 24, 52 + Math.round(Math.cos(needle) * 3), 24 + Math.round(Math.sin(needle) * 3), '#c2453b');
+  pix.rect(14, 22, 3, 3, frame % 2 ? '#6cff8a' : '#2f6b3a', CAST.o);
+  pix.rect(19, 22, 3, 3, frame % 2 ? '#5a2020' : '#ff6b5b', CAST.o);
+  // Contador (janelinha escura com 3 roletes)
+  pix.rect(cx - 9, 53, 18, 6, '#0c0b18', CAST.o);
+  for (let i = 0; i < 3; i++) pix.rect(cx - 7 + i * 5, 54, 4, 4, i === 2 ? '#3a3570' : '#1d1a38');
+  // Funil de cristais no topo (vidro com cristais brutos)
+  for (let y = 4; y < 17; y++) {
+    const hw = 4 + (16 - y) * 0.75;
+    for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) {
+      const edge = x === Math.round(cx - hw) || x === Math.round(cx + hw);
+      pix.set(x, y, edge ? '#9fd8ff' : y > 8 && noise(x, y, 4) > 0.45 ? (noise(x, y, 6) > 0.5 ? CRYSTAL.t[3] : PURPLE_CRYSTAL.t[3]) : '#2a3a5a', '#1d2a48');
+    }
+  }
+  for (let x = cx - 13; x <= cx + 13; x++) pix.set(x, 3, x < cx ? BRASS.t[4] : BRASS.t[2], BRASS.o);
+  pix.rect(cx - 5, 15, 11, 2, BRASS.t[2], BRASS.o);
+  for (let i = 0; i < 4; i++) crystalPixel(pix, cx - 6 + i * 4, 8 - (i % 2), i % 2 ? PURPLE_CRYSTAL : CRYSTAL, 3);
+  // Chaminé com tampa e anel de cobre
+  pix.cylinder(50, 2, 5, 16, CAST, { min: 1 });
+  pix.rect(48, 1, 9, 2, CAST.t[4], CAST.o);
+  pix.cylinder(50, 9, 5, 2, COPPER);
+  // Cano de cobre com válvula na lateral direita
+  pix.cylinder(60, 26, 3, 22, COPPER);
+  ring(pix, 61.5, 30, 0, 2.6, (x, y, dx, dy, d) => pix.set(x, y, d > 1.4 ? '#c2453b' : '#f4ecdc', '#5a1a14'));
+  // Calha de saída de latão até o carrinho
+  for (let i = 0; i <= 10; i++) {
+    const x = 60 + i;
+    const y = 50 + Math.round(i * 0.7);
+    if (x >= pix.w) break;
+    pix.set(x, y, BRASS.t[4], BRASS.o);
+    pix.set(x, y + 1, BRASS.t[2], BRASS.o);
+    pix.set(x, y + 2, BRASS.t[0], BRASS.o);
+  }
+  // Manivela: roda raiada na lateral esquerda
+  const wx = 6;
+  const wy = 40;
+  ring(pix, wx, wy, 4.4, 6.2, (x, y, dx, dy, d) => pix.set(x, y, toneOf(lightOf(dx / d, dy / d, 0.4), x, y, CAST, { min: 1 }), CAST.o));
   const angle = (frame / 4) * Math.PI * 2;
-  const hx = 2 + Math.round(Math.cos(angle) * 3);
-  const hy = 20 + Math.round(Math.sin(angle) * 3);
-  pix.set(2, 20, IRON.t[2], IRON.o);
-  pix.line(2, 20, hx, hy, IRON.t[3], IRON.o);
-  pix.rect(hx - 1, hy - 1, 2, 2, ramp('#c2453b').t[3], ramp('#c2453b').o);
-  // Chaminé com tampa
-  pix.cylinder(23, 1, 4, 7, IRON, { min: 1 });
-  pix.rect(22, 1, 6, 1, IRON.t[4], IRON.o);
+  for (let k = 0; k < 4; k++) {
+    const a = angle + (k * Math.PI) / 2;
+    pix.line(wx, wy, wx + Math.round(Math.cos(a) * 4.4), wy + Math.round(Math.sin(a) * 4.4), CAST.t[3]);
+  }
+  pix.rect(wx - 1, wy - 1, 3, 3, BRASS.t[3], BRASS.o);
+  const hx = wx + Math.round(Math.cos(angle) * 5.5);
+  const hy = wy + Math.round(Math.sin(angle) * 5.5);
+  pix.rect(hx - 1, hy - 2, 3, 4, ramp('#c2453b').t[3], ramp('#c2453b').o);
+  pix.set(hx - 1, hy - 2, '#ff9f8a');
   pix.outline();
-  return { pix, ax: 17, ay: 45 };
+  return { pix, ax: cx, ay: 72 };
 }
 
 export function drawCrankMachine(ctx, x, y, t, running) {
-  pixelShadow(ctx, x, y, 16, 2);
-  const frame = running ? Math.floor(t * 12) % 4 : 0;
-  blit(ctx, sprite(`crank-machine:${frame}`, () => buildCrankMachine(frame)), x, y);
+  pixelShadow(ctx, x + 2, y, 28, 3);
+  const frame = running ? Math.floor(t * 12) % 4 : Math.floor(t * 1.5) % 2;
+  blit(ctx, sprite(`crank-machine2:${frame}`, () => buildCrankMachine(frame)), x, y);
+  // Fumacinha da chaminé
+  for (let i = 0; i < 3; i++) {
+    const phase = (t * (running ? 0.9 : 0.4) + i / 3) % 1;
+    ctx.fillStyle = `rgba(235, 235, 245, ${0.5 * (1 - phase)})`;
+    const size = 2 + Math.round(phase * 3);
+    ctx.fillRect(Math.round(x + 18 + Math.sin(phase * 5 + i) * 2), Math.round(y - 74 - phase * 18), size, size);
+  }
 }
 
 /* ---------- Carrinho de mina com cristais ---------- */
@@ -175,58 +275,139 @@ export function drawCargoBridge(ctx, x, y, lowered, state) {
 
 /* ---------- Conversor de energia e tubo de saída ---------- */
 
-function buildConverter() {
-  const pix = new Pix(34, 44);
-  // Base
-  pix.box(3, 30, 28, 13, METAL, { top: 3, light: 0.7 });
-  rivet(pix, 5, 35);
-  rivet(pix, 27, 35);
-  // Cúpula de vidro
-  pix.ellipsoid(17, 20, 12, 12, GLASS, { test: (x, y) => y <= 30, min: 1 });
-  for (let y = 12; y <= 22; y += 5) pix.set(10, y, GLASS.t[4]);
-  // Anéis de cobre
-  for (let x = 4; x <= 29; x++) pix.set(x, 30, x < 17 ? BRASS.t[4] : BRASS.t[2], BRASS.o);
-  // Canos de entrada (esquerda) e saída (direita)
-  pix.cylinder(0, 34, 3, 4, STEEL);
-  pix.cylinder(31, 34, 3, 4, STEEL);
+const PLASMA = ['#0b3a44', '#127a86', '#2fb8c8', '#7fe6ff', '#e8fdff'];
+
+function buildConverter(frame, active) {
+  const pix = new Pix(56, 72);
+  const cx = 28;
+  // Base octogonal de metal com faixas de cobre
+  for (let y = 54; y < 71; y++) {
+    const inset = y < 57 ? 57 - y : y > 68 ? y - 68 : 0;
+    for (let x = 4 + inset; x < 52 - inset; x++) {
+      const nx = ((x - 4) / 48) * 2 - 1;
+      const band = y === 58 || y === 59 || y === 66;
+      const R = band ? COPPER : CAST;
+      pix.set(x, y, toneOf(lightOf(nx, y < 58 ? -0.7 : 0.1, 0.7) + (band ? 0.1 : 0), x, y, R, { min: band ? 0 : 1 }), R.o);
+    }
+  }
+  // Mostrador na frente da base
+  ring(pix, cx, 63, 0, 3.4, (x, y, dx, dy, d) => pix.set(x, y, d > 2.4 ? BRASS.t[2] : '#f4ecdc', BRASS.o));
+  pix.line(cx, 63, cx + (active ? 2 : -2), 61, '#c2453b');
+  // Entrada de células (fenda à esquerda) e saída (cano à direita)
+  pix.rect(4, 44, 9, 12, CAST.t[2], CAST.o);
+  pix.rect(6, 46, 5, 8, '#0c0b18');
+  pix.rect(7, 47, 3, 6, GLASS.t[active ? 3 : 1]);
+  pix.rect(44, 47, 12, 5, COPPER.t[2], COPPER.o);
+  pix.rect(44, 47, 12, 1, COPPER.t[4]);
+  // Cilindro de vidro com bobinas de cobre e o núcleo de plasma
+  for (let y = 24; y < 55; y++) {
+    for (let x = 12; x < 44; x++) {
+      const nx = ((x - 12) / 32) * 2 - 1;
+      const coil = (y - 24) % 6 < 2;
+      if (coil) {
+        pix.set(x, y, toneOf(lightOf(nx, 0, Math.sqrt(1 - nx * nx) + 0.2) + ((y - 24) % 6 === 0 ? 0.15 : -0.1), x, y, COPPER), COPPER.o);
+        continue;
+      }
+      const d = Math.abs(x + 0.5 - cx) / 9;
+      const pulse = active ? 1 : 0.55;
+      const wave = Math.sin(y * 0.6 + frame * 1.6) * 0.15;
+      let level = (1 - d) * pulse + wave;
+      if (d > 1) level = 0.05 + (noise(x, y, 3) > 0.92 ? 0.15 : 0);
+      const tone = Math.max(0, Math.min(4, Math.round(level * 4.2)));
+      pix.set(x, y, d > 1 ? (nx < -0.75 ? '#5a7090' : '#1d2a40') : PLASMA[tone], '#0c1a2a');
+    }
+  }
+  // Reflexo no vidro
+  for (let y = 26; y < 52; y += 1) if ((y - 24) % 6 >= 2) pix.set(15, y, '#cfe8ff');
+  // Anéis de latão em cima e embaixo do cilindro
+  for (const ry of [22, 54]) for (let x = 10; x < 46; x++) {
+    pix.set(x, ry, toneOf(lightOf(((x - 10) / 36) * 2 - 1, -0.5, 0.6), x, ry, BRASS), BRASS.o);
+    pix.set(x, ry + 1, BRASS.t[1], BRASS.o);
+  }
+  // Cúpula de vidro com arcos elétricos e a esfera terminal
+  for (let y = 6; y < 22; y++) {
+    for (let x = 12; x < 44; x++) {
+      const nx = (x + 0.5 - cx) / 16;
+      const ny = (y + 0.5 - 22) / 16;
+      if (nx * nx + ny * ny > 1) continue;
+      pix.set(x, y, nx < -0.55 && ny < -0.2 ? '#cfe8ff' : '#1a2a44', '#0c1a2a');
+    }
+  }
+  const arc = (seed) => {
+    let x = cx;
+    for (let y = 9; y < 22; y++) {
+      x += Math.round((noise(seed, y, frame + 7) - 0.5) * 3);
+      x = Math.max(16, Math.min(40, x));
+      pix.set(x, y, active ? '#ffffff' : '#7fe6ff');
+      if (active) pix.set(x + 1, y, '#7fe6ff');
+    }
+  };
+  arc(1);
+  if (active || frame % 2) arc(5);
+  ring(pix, cx, 5, 0, 3.6, (x, y, dx, dy, d) => pix.set(x, y, toneOf(lightOf(dx / 3.6, dy / 3.6, 0.6), x, y, BRASS), BRASS.o));
+  pix.rect(cx - 1, 8, 3, 2, BRASS.t[1], BRASS.o);
   pix.outline();
-  return { pix, ax: 17, ay: 43 };
+  return { pix, ax: cx, ay: 70 };
 }
 
 export function drawConverter(ctx, x, y, t, active) {
-  pixelShadow(ctx, x, y, 16, 2);
-  blit(ctx, sprite('converter', buildConverter), x, y);
-  // Energia girando dentro da cúpula
-  const speed = active ? 6 : 1.2;
-  for (let i = 0; i < 10; i++) {
-    const a = t * speed + (i * Math.PI) / 5;
-    const r = 6 + (i % 3) * 2;
-    ctx.fillStyle = i % 2 ? '#e3fffb' : '#7ff0e0';
-    ctx.globalAlpha = active ? 1 : 0.55;
-    ctx.fillRect(Math.round(x + Math.cos(a) * r), Math.round(y - 23 + Math.sin(a) * r * 0.45), 2, 1);
-  }
-  ctx.globalAlpha = 1;
+  pixelShadow(ctx, x, y, 24, 3);
+  const frame = Math.floor(t * (active ? 14 : 4)) % 4;
+  blit(ctx, sprite(`converter2:${frame}:${active}`, () => buildConverter(frame, active)), x, y);
+  // Brilho do núcleo
+  const glow = ctx.createRadialGradient(x, y - 36, 2, x, y - 36, active ? 34 : 22);
+  glow.addColorStop(0, `rgba(127, 230, 255, ${active ? 0.35 : 0.14})`);
+  glow.addColorStop(1, 'rgba(127, 230, 255, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 36, y - 72, 72, 72);
 }
 
-/** Tubo de vidro graduado que mostra a saída (enche até `value` de `max`). */
+/** Tubo de vidro graduado (marcas a cada 4, números a cada 8) que enche até `value` de `max`. */
 export function drawOutputTube(ctx, x, y, value, max, predicted) {
-  const h = 46;
+  const h = 62;
   const top = y - h;
-  ctx.fillStyle = '#29253a';
-  ctx.fillRect(Math.round(x - 5), top - 1, 10, h + 2);
+  const X = Math.round(x);
+  // Tampas de latão
+  ctx.fillStyle = '#5a3e12';
+  ctx.fillRect(X - 8, top - 5, 16, 5);
+  ctx.fillRect(X - 8, y, 16, 5);
+  ctx.fillStyle = '#d9a640';
+  ctx.fillRect(X - 7, top - 4, 14, 3);
+  ctx.fillRect(X - 7, y + 1, 14, 3);
+  ctx.fillStyle = '#fff0b0';
+  ctx.fillRect(X - 7, top - 4, 6, 1);
+  // Vidro
   ctx.fillStyle = '#0c0b18';
-  ctx.fillRect(Math.round(x - 4), top, 8, h);
+  ctx.fillRect(X - 6, top, 12, h);
   const level = Math.round(Math.min(1, Math.max(0, value / max)) * (h - 2));
-  ctx.fillStyle = '#3fbfae';
-  ctx.fillRect(Math.round(x - 3), y - 1 - level, 6, level);
-  ctx.fillStyle = '#7ff0e0';
-  ctx.fillRect(Math.round(x - 3), y - 1 - level, 2, level);
+  const liquid = ctx.createLinearGradient(X - 5, 0, X + 5, 0);
+  liquid.addColorStop(0, '#7ff0e0');
+  liquid.addColorStop(0.5, '#3fbfae');
+  liquid.addColorStop(1, '#1f7f78');
+  ctx.fillStyle = liquid;
+  ctx.fillRect(X - 5, y - 1 - level, 10, level);
+  ctx.fillStyle = '#e8fdff';
+  if (level > 2) ctx.fillRect(X - 5, y - 1 - level, 10, 1);
   ctx.fillStyle = 'rgba(255,255,255,.35)';
-  for (let v = 0; v <= max; v += 4) ctx.fillRect(Math.round(x + 2), Math.round(y - 1 - (v / max) * (h - 2)), 2, 1);
+  ctx.fillRect(X - 4, top + 2, 2, h - 4);
+  // Marcas e números
+  ctx.font = '700 5px "Fredoka", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  for (let v = 0; v <= max; v += 4) {
+    const my = Math.round(y - 1 - (v / max) * (h - 2));
+    ctx.fillStyle = v % 8 === 0 ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.35)';
+    ctx.fillRect(X + 3, my, v % 8 === 0 ? 3 : 2, 1);
+    if (v % 8 === 0) {
+      ctx.fillStyle = '#cfe0ff';
+      ctx.fillText(String(v), X + 8, my);
+    }
+  }
   if (predicted != null) {
     const py = Math.round(y - 1 - Math.min(1, predicted / max) * (h - 2));
     ctx.fillStyle = '#ffcf4a';
-    ctx.fillRect(Math.round(x - 7), py, 14, 1);
+    ctx.fillRect(X - 9, py, 18, 1);
+    ctx.fillRect(X - 10, py - 1, 2, 3);
   }
 }
 
