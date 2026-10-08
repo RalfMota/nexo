@@ -69,6 +69,9 @@ export function questInteractables() {
 
 export const questObjects = () => [...objects.values()];
 
+/** Objeto ancorado num ponto do mapa (os de área inteira usam x = y = 0). */
+export const isAnchored = (object) => Boolean(object.x || object.y);
+
 /* ---------- O que o jogador carrega e a pose de ação ---------- */
 
 /**
@@ -166,9 +169,14 @@ export function updateQuestLayer(dt) {
 
 const easeOutBack = (x) => 1 + 2.4 * (x - 1) ** 3 + 1.4 * (x - 1) ** 2;
 
-export function drawQuestObjects(ctx, t) {
+/**
+ * Desenha os objetos das missões. `include` escolhe quais (o mundo desenha os que estão
+ * atrás do jogador numa camada e os que estão na frente em outra).
+ */
+export function drawQuestObjects(ctx, t, include = () => true) {
   const calm = prefersCalm();
   for (const object of objects.values()) {
+    if (!include(object)) continue;
     if (object.visible) {
       const shown = object.visible();
       if (shown && !object._shown) {

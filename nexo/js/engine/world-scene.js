@@ -18,14 +18,14 @@ import { ActorView, ensureCanvasTexture } from './actor-view.js';
 import { createFx } from './fx.js';
 import { player, REACH, createPlayerBody, createMover, animatePlayer, placeBody, setImpactSource, getPlayerFrame } from './player.js';
 import { TILE, MAP_W, MAP_H, BARRIERS, SIGNS, CORE, BUILDINGS, ground, isStaticSolid, tileFoot, zoneAt } from '../world/map.js';
-import { getBaseLayer, drawGroundLayer, drawOverlayLayer, createAmbient, updateAmbient, TREES, treeSway } from '../world/renderer.js';
+import { getBaseLayer, drawGroundLayer, drawFrontLayer, inFrontOfPlayer, drawOverlayLayer, createAmbient, updateAmbient, TREES, treeSway } from '../world/renderer.js';
 import { interact } from '../world/story.js';
 import { CHARACTERS, playerLook } from '../data/characters.js';
 import { REGIONS } from '../data/regions.js';
 import { state } from '../core/state.js';
 import { isRegionOpenById, isRegionDone, currentRegion } from '../game/progress.js';
 import { setZoneName } from '../ui/hud.js';
-import { questInteractables, updateQuestLayer, footstep, setSpawnHook } from '../world/quest-layer.js';
+import { questInteractables, questObjects, updateQuestLayer, footstep, setSpawnHook } from '../world/quest-layer.js';
 import { createAnimator } from '../art/animator.js';
 import { updateWeather, weatherNow } from '../world/weather.js';
 import { setWindStrength } from '../world/scenery.js';
@@ -66,6 +66,8 @@ export class WorldScene extends Phaser.Scene {
 
     this.groundLayer = new CanvasLayer(this, 'mundo-chao', DEPTH.ground);
     this.overlayLayer = new CanvasLayer(this, 'mundo-topo', DEPTH.overlay);
+    this.frontLayer = new CanvasLayer(this, 'mundo-frente', DEPTH.ground);
+    this.frontUsed = false;
     this.fx = createFx(this, DEPTH.overlay - 1);
     setSpawnHook((x, y) => this.fx.sprout(x, y, 10));
 
@@ -133,6 +135,7 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.setZoom(this.zoom);
     this.groundLayer.resize();
     this.overlayLayer.resize();
+    this.frontLayer.resize();
     this.cameraReady = false;
   }
 
@@ -369,6 +372,16 @@ export class WorldScene extends Phaser.Scene {
     const groundCtx = this.groundLayer.begin(view, this.zoom);
     drawGroundLayer(groundCtx, frame);
     this.groundLayer.end();
+    // Objetos na frente do jogador: a camada fica logo acima dos pés dele. Sem nenhum objeto
+    // na frente (o caso comum), a camada nem é limpa nem redesenhada.
+    const front = frame.player && questObjects().some((object) => inFrontOfPlayer(object, frame.player));
+    if (front || this.frontUsed) {
+      const frontCtx = this.frontLayer.begin(view, this.zoom);
+      if (front) drawFrontLayer(frontCtx, frame);
+      this.frontLayer.end();
+      this.frontUsed = front;
+    }
+    this.frontLayer.image.setDepth(frame.player ? frame.player.y + 0.25 : DEPTH.ground);
     const overlayCtx = this.overlayLayer.begin(view, this.zoom);
     drawOverlayLayer(overlayCtx, frame, this.overlayLayer.texture);
     this.overlayLayer.end();

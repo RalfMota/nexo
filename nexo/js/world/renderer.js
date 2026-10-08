@@ -14,7 +14,7 @@ import {
   drawCoreCrystal, drawTowerCrystal, drawStationSignal, drawSmoke,
 } from '../art/structures.js';
 import { outlinedText } from '../art/shapes.js';
-import { drawQuestObjects, drawCarried, drawEffects } from './quest-layer.js';
+import { drawQuestObjects, drawCarried, drawEffects, isAnchored } from './quest-layer.js';
 import { drawGrass, drawWater, drawLeaves, drawLight, updateScenery, wind } from './scenery.js';
 import { TREE_VARIANTS } from '../art/trees.js';
 import { weatherNow, drawSplashes, drawWeatherScreen } from './weather.js';
@@ -101,8 +101,20 @@ export function drawGroundLayer(ctx, frame) {
   }
 
   drawCoreCrystal(ctx, CORE, progress.energy, t);
-  drawQuestObjects(ctx, t);
+  drawQuestObjects(ctx, t, (object) => !inFrontOfPlayer(object, player));
   if (compass) drawCompassRings(ctx, world.interactables, t);
+}
+
+/** Objeto de missão com os pés mais abaixo que os do jogador: aparece na frente dele. */
+export const inFrontOfPlayer = (object, player) => Boolean(player) && isAnchored(object) && object.y > player.y;
+
+/**
+ * Camada da frente: objetos de missão que estão mais perto da câmera que o jogador. A cena
+ * põe esta camada logo acima do jogador (profundidade = altura dos pés dele), então máquinas
+ * altas cobrem o personagem quando ele passa por trás delas.
+ */
+export function drawFrontLayer(ctx, frame) {
+  drawQuestObjects(ctx, frame.t, (object) => inFrontOfPlayer(object, frame.player));
 }
 
 /**
