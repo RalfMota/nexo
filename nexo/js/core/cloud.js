@@ -8,12 +8,13 @@
  * e também acontece quando a aba é escondida ou fechada.
  */
 
-import { onStateSaved, turmaOf, activeStudent } from './state.js';
+import { onStateSaved, turmaOf, activeStudent, cloudKeyOf } from './state.js';
 
 const SYNC_DELAY = 4000;
 const CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/;
 
-let timer = null;
+/** Envios esperando o fim do intervalo, um por aluno (trocar de aluno não cancela o do anterior). */
+const pending = new Map(); // id do aluno → { timer, student }
 let lastStatus = { ok: null, at: null, message: '' };
 const statusListeners = new Set();
 
@@ -27,9 +28,16 @@ function payload(student) {
     codigo: turmaOf(student),
     aluno: {
       id: student.id,
+      chave: cloudKeyOf(student),
       apelido: student.name,
       criado: student.created,
-      dados: { player: save.player ?? null, done: save.done ?? {}, stats: save.stats ?? {}, seen: save.seen ?? {} },
+      dados: {
+        player: save.player ?? null,
+        done: save.done ?? {},
+        stats: save.stats ?? {},
+        seen: save.seen ?? {},
+        dbg: Boolean(save.dbg), // regiões liberadas pelo modo de teste: o professor fica sabendo
+      },
     },
   };
 }
@@ -62,6 +70,11 @@ async function post(path, body) {
 /** Envia agora o progresso de um aluno (se ele estiver numa turma). */
 export async function syncStudent(student = activeStudent()) {
   if (!student || !turmaOf(student)) return false;
+  const waiting = pending.get(student.id);
+  if (waiting) {
+    clearTimeout(waiting.timer);
+    pending.delete(student.id);
+  }
   try {
     await post('/api/sync', payload(student));
     setStatus(true);
@@ -76,23 +89,24 @@ export async function syncStudent(student = activeStudent()) {
 export function initCloudSync() {
   onStateSaved((student) => {
     if (!turmaOf(student)) return;
-    clearTimeout(timer);
-    timer = setTimeout(() => syncStudent(student), SYNC_DELAY);
+    clearTimeout(pending.get(student.id)?.timer);
+    pending.set(student.id, { student, timer: setTimeout(() => syncStudent(student), SYNC_DELAY) });
   });
-  // Ao esconder ou fechar a aba, envia o que estiver pendente
+  // Ao esconder ou fechar a aba, envia tudo o que estiver pendente (de todos os alunos)
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'hidden' || !timer) return;
-    clearTimeout(timer);
-    timer = null;
-    const student = activeStudent();
-    if (student && turmaOf(student) && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/sync', new Blob([JSON.stringify(payload(student))], { type: 'application/json' }));
+    if (document.visibilityState !== 'hidden' || !pending.size) return;
+    for (const { timer, student } of pending.values()) {
+      clearTimeout(timer);
+      if (!turmaOf(student)) continue;
+      const body = new Blob([JSON.stringify(payload(student))], { type: 'application/json' });
+      if (!navigator.sendBeacon?.('/api/sync', body)) syncStudent(student);
     }
+    pending.clear();
   });
 }
 
 /* ---------- Professor ---------- */
 
-export const createClass = (nome, senha) => post('/api/turma', { acao: 'criar', nome, senha });
+export const createClass = (nome, senha, convite) => post('/api/turma', { acao: 'criar', nome, senha, convite });
 export const readClass = (codigo, senha) => post('/api/turma', { acao: 'ler', codigo: normalizeCode(codigo), senha });
 export const removeFromClass = (codigo, senha, id) => post('/api/turma', { acao: 'remover', codigo: normalizeCode(codigo), senha, id });

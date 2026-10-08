@@ -6,6 +6,7 @@ import { syncStudent, syncStatus, onSyncStatus, isValidCode, normalizeCode } fro
 import { getBaseLayer } from '../world/renderer.js';
 import { openJournal } from './journal.js';
 import { accessibilityMarkup, bindAccessibility, researchMarkup, bindResearch } from './options.js';
+import { researchSummary } from '../core/research-log.js';
 import { showCreate } from './create-screen.js';
 import { showGame } from './game-screen.js';
 import { showProfiles, bindTeacherShortcut } from './profile-screen.js';
@@ -163,12 +164,17 @@ export function showTitle() {
     showGame();
   });
   qs('[data-role="journal"]', app).addEventListener('click', openJournal);
-  qs('[data-role="switch"]', app).addEventListener('click', () => {
+  qs('[data-role="switch"]', app).addEventListener('click', async () => {
+    // Lembrete antes de trocar de aluno: registros de pesquisa ainda não exportados
+    if (state.research.on) {
+      const { pending } = await researchSummary();
+      if (pending && !confirm(`${student.name} tem ${pending} registros de pesquisa ainda não exportados (Opções › Modo Pesquisa). Trocar de aluno mesmo assim? Os registros continuam guardados neste navegador.`)) return;
+    }
     signOut();
     showProfiles();
   });
   qs('[data-role="wipe"]', app).addEventListener('click', () => {
-    if (!confirm(`Apagar todo o progresso de ${student.name}? Exporte os dados de pesquisa antes.`)) return;
+    if (!confirm(`Apagar todo o progresso de ${student.name}? Os registros de pesquisa continuam guardados neste navegador.`)) return;
     resetStudent(student.id);
     showTitle();
   });

@@ -158,31 +158,37 @@ O Painel mostra a lista de alunos (com busca e cadastro) e, para cada um:
 
 Também dá para renomear, zerar o progresso ou excluir um aluno, trocar a senha, **exportar a turma em CSV** (uma linha por aluno e missão, com a situação de cada tópico) e apagar todos os dados do computador.
 
-Sem turma online, tudo fica no `localStorage` deste navegador (chave `nexo_escola_v1`). A senha guarda só um resumo (SHA-256), mas é uma proteção simples: evita que um aluno entre no painel por engano, não protege contra quem tem acesso ao computador. Um save antigo (de antes dos perfis) vira um aluno automaticamente.
+Sem turma online, tudo fica no `localStorage` deste navegador (chave `nexo_escola_v1`). A senha do professor (mínimo de 6 caracteres) guarda só um resumo PBKDF2 com sal aleatório (senhas antigas, em SHA-256, são convertidas no próximo login), mas é uma trava de tela: evita que um aluno entre no painel por engano, não protege contra quem tem acesso ao computador. Um save antigo (de antes dos perfis) vira um aluno automaticamente.
 
 ### Turma online (dados reunidos de vários computadores)
 
 No site publicado, o professor pode juntar a turma inteira, de qualquer computador:
 
-1. No Painel do Professor, **☁ Turma online → Criar uma turma nova** (nome e senha da turma, mínimo de 6 caracteres). O jogo mostra um **código de 6 letras e números** (sem 0/O nem 1/I, fáceis de ditar). A turma já fica ligada a este computador.
+1. No Painel do Professor, **☁ Turma online → Criar uma turma nova** (nome, senha da turma com pelo menos 10 caracteres e o **código de convite** do site, definido na variável de ambiente `NEXO_CONVITE` da Vercel; sem ela configurada, ninguém cria turma). O jogo mostra um **código de 6 letras e números** (sem 0/O nem 1/I, fáceis de ditar). A turma já fica ligada a este computador.
 2. Em cada computador da escola, o professor abre a turma e marca **Usar esta turma para os alunos deste computador**. Em casa, o aluno digita o código na tela de título (**Turma online**).
 3. Enquanto o aluno joga, o progresso é enviado sozinho alguns segundos depois de cada mudança (e ao fechar a aba).
 4. No painel, **Abrir uma turma** (código + senha) lista os alunos deste computador e os que jogaram em outros computadores (☁), com o mesmo relatório. **Atualizar alunos** busca de novo.
 
 **O que vai para a internet:** apenas o apelido, a aparência do personagem, as missões concluídas e as estatísticas. Os registros do Modo Pesquisa e o ID de participante ficam no computador. Por isso o cadastro pede **apelido ou código**, não o nome completo.
 
-**Onde fica:** um armazenamento **privado** da Vercel Blob (loja `nexo-turmas`, região de São Paulo, `gru1`), ligado ao projeto `nexo-jornada-matematica`. Nada é acessível por link; só as funções do próprio site leem e escrevem. Organização: `turmas/<CÓDIGO>/turma.json` (nome e resumo scrypt da senha, com sal) e `turmas/<CÓDIGO>/alunos/<ID>.json`.
+**Onde fica:** um armazenamento **privado** da Vercel Blob (loja `nexo-turmas`, região de São Paulo, `gru1`), ligado ao projeto `nexo-jornada-matematica`. Nada é acessível por link; só as funções do próprio site leem e escrevem. Organização: `turmas/<CÓDIGO>/turma.json` (nome e resumo scrypt da senha, com sal), `turmas/<CÓDIGO>/alunos/<ID>.json` e `turmas/<CÓDIGO>/tentativas.json` (horários das últimas senhas erradas).
 
 **Rotas** (pasta `api/`, funções da Vercel):
 
 | Rota | Quem usa | O que faz |
 |---|---|---|
-| `POST /api/turma` `{acao: 'criar', nome, senha}` | professor | cria a turma e devolve o código |
+| `POST /api/turma` `{acao: 'criar', nome, senha, convite}` | professor | cria a turma e devolve o código |
 | `POST /api/turma` `{acao: 'ler', codigo, senha}` | professor | devolve os alunos da turma (só com a senha certa) |
 | `POST /api/turma` `{acao: 'remover', codigo, senha, id}` | professor | apaga um aluno da turma |
-| `POST /api/sync` `{codigo, aluno}` | jogo do aluno | regrava o arquivo daquele aluno (o servidor descarta qualquer campo fora do esperado) |
+| `POST /api/sync` `{codigo, aluno}` | jogo do aluno | regrava o arquivo daquele aluno, só com a chave secreta dele (o servidor descarta qualquer campo fora do esperado) |
 
-Limites conhecidos: quem tem o código pode enviar progresso para a turma (não pode ler); a senha da turma é a única proteção da leitura. A turma online só funciona no site publicado (ou com `npx vercel dev`); no servidor local simples (`python -m http.server`), o jogo avisa que não conseguiu enviar e continua normalmente.
+**Proteções:**
+- **Chave por aluno:** na primeira sincronização, o jogo cria uma chave secreta para o aluno (guardada só no computador dele); o servidor guarda o resumo e recusa gravações daquele aluno sem a mesma chave. Saber o código da turma não basta para sobrescrever o progresso de um colega.
+- **Bloqueio de senha:** 8 senhas erradas em 15 minutos bloqueiam a turma por 15 minutos.
+- **Limite:** no máximo 80 alunos por turma.
+- **Avisos ao professor (⚠):** regiões liberadas pelo modo de teste, ou missão concluída sem tentativa ou em menos de 5 segundos. Não bloqueiam nada: o progresso vem do navegador do aluno e, num jogo que roda no navegador, não dá para impedir por completo que alguém o forje; os avisos ajudam a conferir.
+
+Limites conhecidos: quem tem o código da turma ainda pode criar alunos novos nela (até o limite); a senha da turma é a única proteção da leitura. A turma online só funciona no site publicado (ou com `npx vercel dev`); no servidor local simples (`python -m http.server`), o jogo avisa que não conseguiu enviar e continua normalmente.
 
 ### Grade curricular
 
@@ -198,10 +204,14 @@ O motor de missões (`js/game/session.js`) grava em `js/game/stats.js`, para cad
 
 ## Modo Pesquisa
 
-Na tela de título, abra **Modo Pesquisa**, informe um ID (sem nome real) e ative o registro. Só então os eventos são gravados no navegador. Exporte JSON ou CSV ao fim de cada sessão e use um ID por estudante. Os tipos de evento são os mesmos das versões anteriores (os dados de algumas tentativas mudaram junto com as mecânicas): `attempt`, `hint_request`, `support_triggered`, `success`, `retry`, `mission_start`, `mission_end`, `region_enter`, `region_return`, `interaction`, `calculator_use`.
+Na tela de título, abra **Modo Pesquisa**, informe um ID (sem nome real) e ative o registro. Só então os eventos são gravados no navegador. Exporte JSON ou CSV ao fim de cada sessão e use um ID por estudante.
+
+Os eventos ficam no **IndexedDB** do navegador (banco `nexo_registros`, `js/core/log-store.js`), um por linha, separados do save: gravar um evento não reescreve mais o registro inteiro da escola, e o limite de ~5 MB do localStorage deixou de valer para eles. Registros de versões anteriores são levados para lá na primeira abertura. O jogo pede ao navegador armazenamento persistente e **avisa na tela** quando não consegue salvar o progresso ou os registros, ou quando o espaço passa de 80%. A seção Modo Pesquisa mostra quantos registros ainda não foram exportados, e trocar de aluno com registros pendentes pede confirmação. Zerar o progresso de um aluno mantém os registros; só **Excluir** o aluno ou **Apagar todos os dados** os remove. Os tipos de evento são os mesmos das versões anteriores (os dados de algumas tentativas mudaram junto com as mecânicas): `attempt`, `hint_request`, `support_triggered`, `success`, `retry`, `mission_start`, `mission_end`, `region_enter`, `region_return`, `interaction`, `calculator_use`.
 
 ## Reset e debug
 
-**Opções > Apagar meu progresso** (tela de título do aluno) zera o progresso daquele aluno. **Apagar todos os dados** (Painel do Professor) remove todos os alunos, registros e a senha. Com `index.html?debug=1` aparece o botão que libera todas as regiões.
+**Opções > Apagar meu progresso** (tela de título do aluno) zera o progresso daquele aluno (os registros de pesquisa continuam). **Apagar todos os dados** (Painel do Professor) remove todos os alunos, registros e a senha. Com `index.html?debug=1` aparece o botão que libera todas as regiões, **só no servidor local** (localhost); no site publicado o parâmetro é ignorado. Se um aluno tiver regiões liberadas assim, o Painel do Professor mostra o aviso ⚠ "modo de teste".
+
+**Testes:** `npm test` roda os testes das rotas da turma online (`tests/api.test.js`), com o armazenamento da Vercel simulado em memória.
 
 Os dados do Diário são indícios situados, não nota nem diagnóstico. O uso com estudantes depende de autorização institucional, consentimento dos responsáveis e assentimento dos participantes.

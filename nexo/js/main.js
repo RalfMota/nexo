@@ -1,6 +1,9 @@
 /* NEXO — Inicialização */
 
-import { applySettings } from './core/state.js';
+import { applySettings, onSaveProblem } from './core/state.js';
+import { migrateSavedLogs } from './core/research-log.js';
+import { onLogProblem } from './core/log-store.js';
+import { showToast } from './ui/toast.js';
 import { showProfiles } from './ui/profile-screen.js';
 import { initMusic } from './core/music.js';
 import { initCloudSync } from './core/cloud.js';
@@ -12,7 +15,12 @@ function waitForFonts(timeout = 1500) {
   return Promise.race([Promise.allSettled(loads), new Promise((resolve) => setTimeout(resolve, timeout))]);
 }
 
+// Problemas de armazenamento aparecem na tela (antes, o jogo seguia sem salvar e sem avisar)
+onSaveProblem((message) => showToast('Atenção:', message, 12000));
+onLogProblem((message) => showToast('Modo Pesquisa:', message, 12000));
+
 applySettings();
+migrateSavedLogs();
 initMusic();
 initCloudSync();
 waitForFonts().then(showProfiles);

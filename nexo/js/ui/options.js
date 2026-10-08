@@ -2,7 +2,7 @@
 
 import { state, saveState, applySettings } from '../core/state.js';
 import { escapeHtml, qs } from '../core/dom.js';
-import { exportResearchData } from '../core/research-log.js';
+import { exportResearchData, researchSummary } from '../core/research-log.js';
 import { musicSettings, setMusicEnabled, setMusicVolume } from '../core/music.js';
 
 export function accessibilityMarkup() {
@@ -29,7 +29,8 @@ export function researchMarkup() {
   return `
     <label class="row"><input type="checkbox" id="research-on" ${state.research.on ? 'checked' : ''}> Registrar os dados desta sessão</label>
     <label class="field">ID do participante <input id="research-id" maxlength="20" value="${escapeHtml(state.research.id)}" autocomplete="off"></label>
-    <p class="small muted" id="research-message">Use apenas um código, sem nome, CPF, e-mail ou telefone. Os dados ficam neste navegador: exporte ao final de cada sessão.</p>
+    <p class="small muted">Use apenas um código, sem nome, CPF, e-mail ou telefone. Os dados ficam neste navegador: exporte ao final de cada sessão.</p>
+    <p class="small" id="research-message" role="status"></p>
     <div class="row">
       <button type="button" class="btn btn--ghost btn--small" data-export="json">Exportar JSON</button>
       <button type="button" class="btn btn--ghost btn--small" data-export="csv">Exportar CSV</button>
@@ -46,19 +47,33 @@ export function bindResearch(root) {
     if (toggle.checked && !id) {
       toggle.checked = false;
       message.textContent = 'Informe um ID para ativar o Modo Pesquisa.';
-      state.research = { on: false, id: '' };
+      state.research = { ...state.research, on: false, id: '' };
     } else {
-      state.research = { on: toggle.checked, id };
+      state.research = { ...state.research, on: toggle.checked, id };
     }
     saveState();
   };
+
+  // Quantos registros há e quantos ainda não foram exportados
+  const showSummary = async () => {
+    const { total, pending } = await researchSummary();
+    if (!total) {
+      message.textContent = '';
+      return;
+    }
+    message.textContent = pending
+      ? `${total} registros neste navegador; ${pending} ainda não exportados.`
+      : `${total} registros neste navegador, todos já exportados.`;
+  };
+  showSummary();
   toggle.addEventListener('change', update);
   idInput.addEventListener('change', update);
 
   root.querySelectorAll('[data-export]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const warning = exportResearchData(button.dataset.export);
+    button.addEventListener('click', async () => {
+      const warning = await exportResearchData(button.dataset.export);
       if (warning) message.textContent = warning;
+      else showSummary();
     });
   });
 }

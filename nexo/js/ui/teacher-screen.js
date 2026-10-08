@@ -98,6 +98,15 @@ export function showTeacher() {
   refresh();
 }
 
+/** Avisos sobre a confiabilidade do progresso (modo de teste, conclusão improvável). */
+const flagsOf = (student) => student.flags ?? (student.save?.dbg ? ['modo de teste'] : []);
+
+function flagBadge(student) {
+  const flags = flagsOf(student);
+  if (!flags.length) return '';
+  return ` <span class="cloud-badge tone-warn" title="Progresso a conferir: ${escapeHtml(flags.join(', '))}">⚠</span>`;
+}
+
 function refresh() {
   const students = allStudents();
   if (!students.find((student) => student.id === selectedId)) selectedId = students[0]?.id ?? null;
@@ -126,7 +135,7 @@ function renderList() {
           <button type="button" class="student-row" data-id="${escapeHtml(student.id)}" aria-current="${student.id === selectedId}">
             ${studentAvatar(student, 40)}
             <span class="student-row__text">
-              <b>${escapeHtml(student.name)}${student.cloud ? ' <span class="cloud-badge" title="Na turma online">☁</span>' : ''}</b>
+              <b>${escapeHtml(student.name)}${student.cloud ? ' <span class="cloud-badge" title="Na turma online">☁</span>' : ''}${flagBadge(student)}</b>
               <small>${report.doneCount}/${report.missionCount} missões${report.needs.length ? ` · <span class="tone-warn">${report.needs.length} para reforçar</span>` : ''}</small>
               <span class="meter" aria-hidden="true"><span style="width:${Math.round(report.progress * 100)}%"></span></span>
             </span>
@@ -172,6 +181,7 @@ function renderReport() {
       <div class="report__who">
         <h2>${escapeHtml(student.name)}</h2>
         <p class="muted small">Último acesso: ${formatDate(report.last)} · cadastrado em ${formatDate(student.created).slice(0, 10)}${student.origin === 'online' ? ' · jogou em outro computador (turma online)' : ''}</p>
+        ${flagsOf(student).length ? `<p class="small tone-warn">Progresso a conferir: ${escapeHtml(flagsOf(student).join(', '))}.</p>` : ''}
       </div>
       <div class="row report__actions">${student.origin === 'online' ? `
         <button type="button" class="btn btn--danger btn--small" data-act="unlink">Remover da turma online</button>` : `
@@ -330,7 +340,9 @@ function connectMarkup() {
       <form class="stack pin-form" data-role="create">
         <h3>Criar uma turma nova</h3>
         <label class="field">Nome da turma <input name="nome" maxlength="40" placeholder="Ex.: 6º ano B" autocomplete="off" required></label>
-        <label class="field">Senha da turma (mínimo 6) <input type="password" name="senha" autocomplete="new-password" minlength="6" required></label>
+        <label class="field">Senha da turma (mínimo 10) <input type="password" name="senha" autocomplete="new-password" minlength="10" required></label>
+        <label class="field">Código de convite <input name="convite" autocomplete="off" required></label>
+        <p class="muted small">O código de convite é definido por quem administra o site (variável NEXO_CONVITE na Vercel).</p>
         <button type="submit" class="btn btn--crystal">Criar turma</button>
       </form>
       <p class="pin-form__error" role="alert" hidden></p>
@@ -390,7 +402,7 @@ function openClassPanel() {
   }));
   qs('[data-role="create"]', body).addEventListener('submit', withBusy(body, async (event) => {
     const form = event.target;
-    const { codigo } = await createClass(form.elements.nome.value.trim(), form.elements.senha.value);
+    const { codigo } = await createClass(form.elements.nome.value.trim(), form.elements.senha.value, form.elements.convite.value.trim());
     await loadClass(codigo, form.elements.senha.value);
     setComputerTurma(codigo);
     refresh();
@@ -406,7 +418,7 @@ function changePin() {
     body: `
       <form class="stack pin-form" data-role="change">
         <label class="field">Senha atual <input type="password" name="current" autocomplete="current-password" required></label>
-        <label class="field">Nova senha <input type="password" name="next" autocomplete="new-password" required minlength="4"></label>
+        <label class="field">Nova senha <input type="password" name="next" autocomplete="new-password" required minlength="6"></label>
         <label class="field">Repita a nova senha <input type="password" name="confirm" autocomplete="new-password" required></label>
         <p class="pin-form__error" role="alert" hidden></p>
         <button type="submit" class="btn btn--magic">Salvar nova senha</button>
@@ -422,7 +434,7 @@ function changePin() {
       error.hidden = false;
     };
     if (!(await checkTeacherPin(form.elements.current.value))) return fail('A senha atual está incorreta.');
-    if (form.elements.next.value.length < 4) return fail('A nova senha precisa ter pelo menos 4 caracteres.');
+    if (form.elements.next.value.length < 6) return fail('A nova senha precisa ter pelo menos 6 caracteres.');
     if (form.elements.next.value !== form.elements.confirm.value) return fail('As duas senhas novas não são iguais.');
     await setTeacherPin(form.elements.next.value);
     closeModal();

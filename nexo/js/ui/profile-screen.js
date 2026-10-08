@@ -17,7 +17,7 @@ import { animateVillageBackground, stopVillageBackground, showTitle } from './ti
 import { showCreate } from './create-screen.js';
 import { showTeacher } from './teacher-screen.js';
 
-const MIN_PIN = 4;
+const MIN_PIN = 6; // senhas novas (as antigas, de 4 caracteres, continuam entrando)
 let removeShortcut = null;
 
 /** Retrato do aluno (ou as iniciais, antes de ele criar o personagem). */
@@ -146,9 +146,9 @@ export function openTeacherLogin() {
     body: `
       <form class="stack pin-form" data-role="pin-form">
         <p class="muted">${firstTime
-          ? `Primeiro acesso: crie a senha do professor (pelo menos ${MIN_PIN} caracteres). Ela fica guardada só neste navegador.`
+          ? `Primeiro acesso: crie a senha do professor (pelo menos ${MIN_PIN} caracteres). Ela fica só neste navegador e tranca o painel, mas não criptografa os dados: em computador compartilhado, prefira a turma online.`
           : 'Digite a senha do professor.'}</p>
-        <label class="field">Senha <input type="password" name="pin" autocomplete="${firstTime ? 'new-password' : 'current-password'}" required minlength="${MIN_PIN}"></label>
+        <label class="field">Senha <input type="password" name="pin" autocomplete="${firstTime ? 'new-password' : 'current-password'}" required${firstTime ? ` minlength="${MIN_PIN}"` : ''}></label>
         ${firstTime ? '<label class="field">Repita a senha <input type="password" name="confirm" autocomplete="new-password" required></label>' : ''}
         <p class="pin-form__error" role="alert" hidden></p>
         <button type="submit" class="btn btn--magic">${firstTime ? 'Criar senha e entrar' : 'Entrar'}</button>
@@ -164,7 +164,7 @@ export function openTeacherLogin() {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const pin = form.elements.pin.value;
-    if (pin.length < MIN_PIN) return showError(`A senha precisa ter pelo menos ${MIN_PIN} caracteres.`);
+    if (firstTime && pin.length < MIN_PIN) return showError(`A senha precisa ter pelo menos ${MIN_PIN} caracteres.`);
     if (firstTime) {
       if (pin !== form.elements.confirm.value) return showError('As duas senhas não são iguais.');
       await setTeacherPin(pin);

@@ -3,7 +3,7 @@
  * Um único registro guarda a "escola" deste navegador:
  *   students: cada aluno com nome, datas e o próprio save (progresso, estatísticas, registros);
  *   active:   o aluno que está jogando agora;
- *   teacher:  a senha do professor (só o resumo SHA-256, nunca o texto);
+ *   teacher:  a senha do professor (só o resumo PBKDF2 com sal, nunca o texto);
  *   set:      opções do computador (acessibilidade, música), iguais para todos os alunos;
  *   turma:    código da turma online deste computador (cada aluno pode ter o seu, em student.turma).
  *
@@ -11,10 +11,14 @@
  * continuam importando a mesma referência; trocar de aluno troca o conteúdo dela.
  */
 
+import { deleteEvents, clearAllEvents } from './log-store.js';
+
 const SCHOOL_KEY = 'nexo_escola_v1';
 const LEGACY_KEY = 'nexo_v1';
 
-export const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
+/** Modo de teste (?debug=1): só no computador do desenvolvedor, nunca no site publicado. */
+const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+export const DEBUG = new URLSearchParams(location.search).get('debug') === '1' && LOCAL_HOSTS.includes(location.hostname);
 
 const DEFAULT_SETTINGS = { big: false, calm: false, music: true, volume: 0.45 };
 
@@ -47,11 +51,27 @@ function readJson(key) {
   }
 }
 
+const saveProblemListeners = new Set();
+let lastSaveFailed = false;
+
+/** Avisa a interface quando o progresso não pôde ser salvo (armazenamento cheio ou bloqueado). */
+export function onSaveProblem(listener) {
+  saveProblemListeners.add(listener);
+  return () => saveProblemListeners.delete(listener);
+}
+
 function writeSchool() {
   try {
     localStorage.setItem(SCHOOL_KEY, JSON.stringify(school));
-  } catch {
-    // Sem armazenamento disponível (modo privado, por exemplo): o jogo segue sem salvar.
+    lastSaveFailed = false;
+  } catch (error) {
+    // Avisa uma vez por sequência de falhas (o jogo segue, mas o progresso pode se perder)
+    if (lastSaveFailed) return;
+    lastSaveFailed = true;
+    const full = error?.name === 'QuotaExceededError';
+    saveProblemListeners.forEach((listener) => listener(full
+      ? 'O armazenamento deste navegador está cheio: o progresso não está sendo salvo. Avise o professor.'
+      : 'Este navegador não deixa o jogo salvar (modo privado?). O progresso se perde ao fechar a aba.'));
   }
 }
 
@@ -174,11 +194,12 @@ export function renameStudent(id, name) {
   writeSchool();
 }
 
-/** Apaga o progresso de um aluno (o cadastro continua). */
+/** Apaga o progresso de um aluno (o cadastro e os registros de pesquisa continuam). */
 export function resetStudent(id) {
   const student = school.students[id];
   if (!student) return;
-  student.save = snapshot(createFreshState());
+  const { research, log } = student.save ?? {};
+  student.save = snapshot(Object.assign(createFreshState(), research ? { research, log: log ?? [] } : {}));
   if (school.active === id) replaceState(stateFor(id));
   writeSchool();
 }
@@ -186,6 +207,7 @@ export function resetStudent(id) {
 export function deleteStudent(id) {
   if (!school.students[id]) return;
   delete school.students[id];
+  deleteEvents(id);
   if (school.legacyId === id) delete school.legacyId;
   if (school.active === id) {
     school.active = null;
@@ -194,7 +216,41 @@ export function deleteStudent(id) {
   writeSchool();
 }
 
+/* ---------- Registros de pesquisa antigos (de antes do IndexedDB) ---------- */
+
+/** Alunos que ainda têm eventos de pesquisa guardados dentro do save. */
+export function studentsWithSavedLog() {
+  if (school.active && school.students[school.active]) school.students[school.active].save = snapshot(state);
+  return Object.values(school.students)
+    .filter((student) => student.save?.log?.length)
+    .map((student) => ({ id: student.id, log: student.save.log }));
+}
+
+/** Tira do save os primeiros `count` eventos (depois que eles já foram para o IndexedDB). */
+export function dropSavedLog(id, count) {
+  const student = school.students[id];
+  if (!student?.save?.log) return;
+  student.save.log = student.save.log.slice(count);
+  if (id === school.active) state.log = state.log.slice(count);
+  writeSchool();
+}
+
 /* ---------- Turma online ---------- */
+
+/**
+ * Chave secreta do aluno na turma online: criada na primeira sincronização e enviada em
+ * todas as seguintes. O servidor guarda só o resumo dela e recusa gravações sem a chave,
+ * para que ninguém sobrescreva o progresso de outro aluno só sabendo o código da turma.
+ */
+export function cloudKeyOf(student) {
+  if (!student) return '';
+  if (!student.cloudKey) {
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+    student.cloudKey = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    writeSchool();
+  }
+  return student.cloudKey;
+}
 
 /** Código da turma em que um aluno sincroniza: o dele, ou o do computador. */
 export const turmaOf = (student) => student?.turma || school.turma || null;
@@ -222,21 +278,42 @@ export function setTeacherTurma(info) {
 
 /* ---------- Professor ---------- */
 
-async function digest(text) {
-  const bytes = new TextEncoder().encode(`nexo:${text}`);
-  const hash = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+/*
+ * A senha do professor protege a abertura do painel neste computador. Ela é guardada como
+ * resumo PBKDF2 (SHA-256, 150 mil rodadas, sal aleatório). Os dados dos alunos continuam em
+ * texto aberto no navegador: a senha é uma trava de tela, não criptografia.
+ * Versões antigas guardavam um SHA-256 simples; ele ainda é aceito e é trocado ao entrar.
+ */
+const PIN_ROUNDS = 150_000;
+const toHex = (buffer) => [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+
+async function legacyDigest(text) {
+  return toHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`nexo:${text}`)));
+}
+
+async function pinHash(pin, salt) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: PIN_ROUNDS }, key, 256);
+  return toHex(bits);
 }
 
 export const hasTeacherPin = () => Boolean(school.teacher.pin);
 
 export async function setTeacherPin(pin) {
-  school.teacher.pin = await digest(pin);
+  const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
+  school.teacher.pin = { v: 2, salt, hash: await pinHash(pin, salt) };
   writeSchool();
 }
 
 export async function checkTeacherPin(pin) {
-  return Boolean(school.teacher.pin) && (await digest(pin)) === school.teacher.pin;
+  const saved = school.teacher.pin;
+  if (!saved) return false;
+  if (typeof saved === 'string') {
+    if ((await legacyDigest(pin)) !== saved) return false;
+    await setTeacherPin(pin); // atualiza para o formato novo
+    return true;
+  }
+  return (await pinHash(pin, saved.salt)) === saved.hash;
 }
 
 /* ---------- Novo jogo e limpeza ---------- */
@@ -256,6 +333,7 @@ export function wipeAll() {
   } catch {
     // nada a fazer
   }
+  clearAllEvents();
   const fresh = createSchool();
   for (const key of Object.keys(school)) delete school[key];
   Object.assign(school, fresh);
