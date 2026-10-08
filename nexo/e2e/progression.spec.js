@@ -43,3 +43,18 @@ test('trilha rápida: Vale e Mercado viram aquecimento e a Oficina abre direto',
   expect(result.extrasVale).toEqual(['r1c', 'r1d']);
   expect(errors).toEqual([]);
 });
+
+test('save antigo com as Bancas concluídas ganha a Promoção, sem fechar o caminho', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const save = { player: { name: 'Antigo' }, done: { p0: { tries: 1, sec: 60 }, r1a: { tries: 2, sec: 90 }, r1b: { tries: 3, sec: 90 }, r2a: { tries: 2, sec: 120, sup: 'autonomo' }, r2b: { tries: 4, sec: 200 } }, stats: {}, inv: [], seen: {}, research: { on: false, id: '' }, log: [] };
+    localStorage.setItem('nexo_escola_v1', JSON.stringify({ version: 1, students: { aantigo1: { id: 'aantigo1', name: 'Antigo', created: 1, lastSeen: 1, save } }, active: 'aantigo1', teacher: { pin: null }, set: {} }));
+  });
+  await page.reload();
+  const result = await page.evaluate(async () => {
+    const P = await import('/js/game/progress.js');
+    const st = await import('/js/core/state.js');
+    return { r2c: st.state.done.r2c?.migrada ?? false, oficinaAberta: P.isRegionOpenById('r3') };
+  });
+  expect(result).toEqual({ r2c: true, oficinaAberta: true });
+});

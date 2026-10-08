@@ -156,3 +156,44 @@ test('Grade de Energia: os cinco andares da Torre', async ({ page }) => {
   expect(await missionDone(page, 'r5a')).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('Bancas do Mercado: pedidos exatos de 12 e de 17 cristais', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r2a');
+  await useObject(page, 'stall-lua', 3); // 12
+  await useObject(page, 'counter');
+  await wait(page, 2700);
+  await useObject(page, 'stall-sol', 3); // 18: passou
+  await useObject(page, 'counter');
+  expect(await missionDone(page, 'r2a')).toBe(false);
+  await useObject(page, 'return-crate');
+  await useObject(page, 'stall-sol', 2); // 12 + 5 = 17
+  await useObject(page, 'stall-estrela');
+  await useObject(page, 'counter');
+  expect(await missionDone(page, 'r2a')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Promoção: preço por cristal e depois o desconto de 20%', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r2c');
+  await useObject(page, 'stall-sol', 4); // 24 cristais por 72 moedas: passou da bolsa
+  await useObject(page, 'counter');
+  await useObject(page, 'return-crate');
+  await useObject(page, 'stall-lua', 5); // 20 por 50
+  await useObject(page, 'counter');
+  await wait(page, 2700);
+  await useObject(page, 'stall-lua', 5); // 50 moedas: passou de 48
+  await useObject(page, 'counter');
+  await useObject(page, 'return-crate');
+  await useObject(page, 'stall-estrela', 4); // 20 por 4 × 12 = 48
+  await useObject(page, 'counter');
+  expect(await missionDone(page, 'r2c')).toBe(true);
+  expect(errors).toEqual([]);
+});

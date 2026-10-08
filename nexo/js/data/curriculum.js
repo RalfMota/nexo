@@ -10,7 +10,8 @@
  * Etapas das missões de mundo (índice começa em 0):
  *   r1a Partilha das Sementes: 0 contar, 1 repartir, 2 dividir com resto
  *   r1b Comportas do Vale:     0 metade (8 baldes), 1 metade e terço (12), 2 depois da chuva (18)
- *   r2a Bancas do Mercado:     0 juntar 12 cristais, 1 comparar preços com desconto
+ *   r2a Bancas do Mercado:     0 juntar 12 cristais, 1 juntar 17 cristais
+ *   r2c Promoção:              0 preço por cristal (50 moedas), 1 desconto de 20% (48 moedas)
  *   r2b Caldeirão de Orin:     0 receita, 1 dobro, 2 proporção (5 frascos)
  *   r1c Jardim Espelhado:      0 eixo vertical, 1 duas cores, 2 eixo horizontal (extra)
  *   r1d Cercas do Vale:        0 perímetro, 1 mesmo perímetro e mais área, 2 mesma área e menos cerca (extra)
@@ -38,7 +39,7 @@ export const TOPICS = [
     band: 'iniciais',
     years: '1º ao 3º ano',
     unit: 'Números',
-    links: [{ mission: 'r2a', stages: [0] }],
+    links: [{ mission: 'r2a', stages: [0, 1] }],
   },
   {
     id: 'subtracao',
@@ -54,7 +55,7 @@ export const TOPICS = [
     band: 'iniciais',
     years: '2º ao 5º ano',
     unit: 'Números',
-    links: [{ mission: 'r2a', stages: [0] }, { mission: 'r3a' }],
+    links: [{ mission: 'r2a', stages: [0, 1] }, { mission: 'r3a' }],
   },
   {
     id: 'divisao',
@@ -96,7 +97,7 @@ export const TOPICS = [
     band: 'finais',
     years: '6º e 7º ano',
     unit: 'Números',
-    links: [{ mission: 'r2a', stages: [1] }],
+    links: [{ mission: 'r2c', stages: [0, 1] }],
   },
   {
     id: 'porcentagem',
@@ -104,7 +105,7 @@ export const TOPICS = [
     band: 'finais',
     years: '6º e 7º ano',
     unit: 'Números',
-    links: [{ mission: 'r2a', stages: [1] }],
+    links: [{ mission: 'r2c', stages: [1] }],
   },
   {
     id: 'proporcao',

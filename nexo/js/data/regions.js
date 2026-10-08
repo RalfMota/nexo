@@ -29,7 +29,7 @@ export const REGIONS = [
     name: 'Mercado das Trocas',
     place: 'Mercado das Trocas',
     motto: 'Nem toda quantidade vale o mesmo',
-    missions: ['r2a', 'r2b'],
+    missions: ['r2a', 'r2b', 'r2c'],
     npc: 'orin',
     accent: '#cf4f33',
     direction: 'ao sul da praça',

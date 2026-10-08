@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = { big: false, calm: false, music: true, volume: 0.45 };
 
 function createFreshState() {
   return {
+    r2cSplit: true,        // save já criado com a Promoção (r2c) separada das Bancas
     player: null,          // { name, av, col, hair, hairStyle, skin }
     done: {},              // missões concluídas: { [id]: { sup, tries, hints, sec, reps } }
     stats: {},             // desempenho por missão, para o Painel do Professor (ver game/stats.js)
@@ -101,10 +102,22 @@ function migrateLegacy(target) {
   }
 }
 
+/**
+ * Atualiza saves de versões anteriores. A missão Promoção (r2c) saiu de dentro das Bancas do
+ * Mercado (r2a): quem concluiu a r2a antiga já fez a comparação de preços com desconto, então
+ * a r2c conta como concluída (marcada com `migrada`) e o caminho não se fecha.
+ */
+function upgradeSave(save) {
+  if (!save?.done) return;
+  if (save.done.r2a && !save.done.r2c && !save.r2cSplit) save.done.r2c = { ...save.done.r2a, reps: 0, migrada: true };
+  save.r2cSplit = true;
+}
+
 function loadSchool() {
   const loaded = Object.assign(createSchool(), readJson(SCHOOL_KEY));
   loaded.set = { ...DEFAULT_SETTINGS, ...loaded.set };
   migrateLegacy(loaded);
+  Object.values(loaded.students).forEach((student) => upgradeSave(student.save));
   if (loaded.active && !loaded.students[loaded.active]) loaded.active = null;
   return loaded;
 }

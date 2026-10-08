@@ -35,7 +35,7 @@ As músicas ficam na pasta `audio/` e tocam em sequência, na ordem da lista `TR
 |---|---|---|---|---|
 | 0 | Praça do Nexo (prólogo) | Lyra | A Ruptura | Familiarização |
 | 1 | Vale dos Recursos (oeste) | Tainá | Partilha das Sementes; Comportas do Vale | Divisão com resto; frações de uma quantidade |
-| 2 | Mercado das Trocas (sul) | Orin | Bancas do Mercado; Caldeirão de Orin | Comparação de razões, porcentagem; proporcionalidade direta |
+| 2 | Mercado das Trocas (sul) | Orin | Bancas do Mercado; Caldeirão de Orin; Promoção | Agrupamento; proporcionalidade direta; preço por unidade e porcentagem |
 | 3 | Oficina dos Construtores (norte) | Kael | Máquina de Produção; Previsão | y = 3x; y = 2x + 4 |
 | 4 | Estação das Rotas (noroeste) | Serah | Custo de Viagem; Ponto de Mudança | Comparação de 5 + 3d e 15 + 2d |
 | 5 | Torre dos Padrões (leste) | Nyla | Grade de Energia; Arquivo da Torre | Generalização (h = 3n + 1); escrita de regras |
@@ -61,7 +61,8 @@ Todas as missões, inclusive o Prólogo, acontecem **no próprio mapa** (a Grade
 |---|---|
 | Partilha das Sementes | pega sementes no saco, leva aos canteiros e se agacha para plantar. Etapas: contar (3 em cada um de 2 canteiros), repartir (12 em 3) e dividir com resto (50 em 6 com a semeadeira; o resto vai no saco até o celeiro) |
 | Comportas do Vale | enche baldes no lago (até 3 de uma vez), despeja nas plantações conforme a placa (1/2, 1/3, o resto) e gira a comporta. Etapas: 8, 12 e 18 baldes |
-| Bancas do Mercado | encosta nas bancas para pôr pacotes no cesto e paga no balcão do Orin. Etapas: exatamente 12 cristais; depois 20 cristais com 48 moedas (desconto de 20% numa banca) |
+| Bancas do Mercado | encosta nas bancas para pôr pacotes no cesto e paga no balcão do Orin. Etapas: exatamente 12 cristais; depois exatamente 17 (pacotes de 4, 6 e 5, mais de um jeito certo) |
+| Promoção | as mesmas bancas, depois do Caldeirão: pelo menos 20 cristais com 50 moedas (só a banca mais barata por cristal serve); depois com 48 moedas e 20% de desconto na Banca da Estrela. Antes, agrupar e comparar preços com desconto estavam na mesma missão (um salto do 3º para o 7º ano). Quem concluiu as Bancas na versão antiga recebe a Promoção como concluída (`migrada`) |
 | Caldeirão de Orin | **no laboratório de poções do Orin** (prédio "Poções" no sul do Mercado): pega folhas-lunares e orvalho nos armários de vidro (as portas abrem), põe no caldeirão e mexe com as mãos vazias. A receita fica na parede: 4 folhas + 6 gotas → 2 frascos; pedidos de 2, 4 e 5 frascos. Os frascos prontos aparecem na bancada |
 | Máquina de Produção | gira a manivela da máquina (a fita no Registro mostra ciclo → cristais), pega o carrinho e leva até a ponte de carga, que pede exatamente 24 |
 | Previsão | leva células da estante ao conversor e faz 3 testes; depois lê o bilhete do Kael, gira o mostrador com a previsão e puxa a alavanca |

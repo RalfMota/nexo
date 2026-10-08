@@ -1,74 +1,90 @@
 /* NEXO — Mercado das Trocas, jogado no próprio mapa: "Nem toda quantidade vale o mesmo"
  *
- * Bancas do Mercado: o jogador encosta nas bancas para pôr pacotes no cesto que carrega
- * e paga no balcão do Orin.
- *   1. Agrupar: exatamente 12 cristais (pacotes de 4, 6 e 5).
- *   2. Comparar preços: pelo menos 20 cristais sem passar de 48 moedas (uma banca com 20% de desconto).
+ * As mesmas três bancas servem a duas missões. O jogador encosta nas bancas para pôr
+ * pacotes no cesto que carrega e paga no balcão do Orin.
+ *   r2a Bancas do Mercado (agrupar): pedidos exatos de 12 e de 17 cristais, com pacotes de
+ *       4, 6 e 5 (há mais de um jeito certo).
+ *   r2c Promoção (depois do Caldeirão): pelo menos 20 cristais com a bolsa limitada.
+ *       1. Preço por cristal: 50 moedas, sem desconto (só a banca mais barata por cristal serve).
+ *       2. Desconto: 48 moedas, com 20% de desconto na Banca da Estrela.
+ * Antes, agrupar e comparar preços com desconto ficavam na mesma missão: um salto do 3º
+ * para o 7º ano de uma etapa para a outra.
  *
  * (O Caldeirão de Orin, r2b, acontece no laboratório de poções: ver potion-lab.js.)
  */
 
 import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
 import { drawCrystalPack, drawWickerBasket } from '../art/items.js';
+import { drawTag } from './world-kit.js';
 
 const TILE = 32;
-
-/* ---------- Desenho compartilhado ---------- */
-
-function drawTag(ctx, x, y, text, { fill = '#fbf3df', ink = '#2b1d14' } = {}) {
-  ctx.font = '700 8px "Fredoka", sans-serif';
-  const width = Math.ceil(ctx.measureText(text).width) + 8;
-  const left = Math.round(x - width / 2);
-  const top = Math.round(y - 6);
-  ctx.fillStyle = '#4f3019';
-  ctx.fillRect(left - 1, top - 1, width + 2, 12);
-  ctx.fillStyle = fill;
-  ctx.fillRect(left, top, width, 10);
-  ctx.fillStyle = ink;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, Math.round(x), top + 5.5);
-}
 
 function drawPack(ctx, x, y, color) {
   drawCrystalPack(ctx, x, y, color);
 }
 
 /* ======================================================================
- * r2a: Bancas do Mercado
+ * Bancas (compartilhadas por r2a e r2c)
  * ==================================================================== */
 
 const STALLS = [
-  { id: 'lua', name: 'Banca da Lua', size: 4, price: 10, discount: 0, color: '#3f8fd6', x: 24 * TILE, y: 36 * TILE + 10 },
-  { id: 'sol', name: 'Banca do Sol', size: 6, price: 18, discount: 0, color: '#e0a12f', x: 27 * TILE, y: 36 * TILE + 10 },
-  { id: 'estrela', name: 'Banca da Estrela', size: 5, price: 15, discount: 0.2, color: '#e0523d', x: 34 * TILE, y: 36 * TILE + 10 },
+  { id: 'lua', name: 'Banca da Lua', size: 4, price: 10, color: '#3f8fd6', x: 24 * TILE, y: 36 * TILE + 10 },
+  { id: 'sol', name: 'Banca do Sol', size: 6, price: 18, color: '#e0a12f', x: 27 * TILE, y: 36 * TILE + 10 },
+  { id: 'estrela', name: 'Banca da Estrela', size: 5, price: 15, color: '#e0523d', x: 34 * TILE, y: 36 * TILE + 10 },
 ];
-const packCost = (stall) => Math.round(stall.price * (1 - stall.discount));
+/** Preço de um pacote na etapa (o desconto, quando há, vem da etapa). */
+const packCost = (stall, stage) => Math.round(stall.price * (1 - (stage.discounts?.[stall.id] ?? 0)));
 const COUNTER = { x: 35 * TILE + 16, y: 37 * TILE + 28 };
 const RETURN_CRATE = { x: 38 * TILE + 16, y: 40 * TILE + 8 };
 
-const STALL_STAGES = [
+const exactly = (target) => (crystals) =>
+  crystals === target ? null : crystals < target ? `O cesto tem ${crystals} cristais: faltam alguns para chegar a ${target}.` : `O cesto tem ${crystals} cristais: passou de ${target}.`;
+
+const atLeastWithin = (target, purse) => (crystals, cost) => {
+  if (cost > purse) return `O total deu ${cost} moedas: faltaram ${cost - purse} na bolsa.`;
+  if (crystals < target) return `A compra custaria ${cost} moedas e daria ${crystals} cristais. Os lampiões precisam de ${target}.`;
+  return null;
+};
+
+/** r2a: agrupar (quantidade exata). */
+const GROUP_STAGES = [
   {
-    label: 'Agrupar',
+    label: 'Pedido de 12',
     objective: 'Junte exatamente 12 cristais no cesto e leve ao balcão do Orin.',
     intro: 'Vamos começar pelos pacotes: preciso de exatamente 12 cristais. Encoste nas bancas para pôr pacotes no cesto e me pague no balcão.',
     purse: null,
-    check: (crystals) => (crystals === 12 ? null : crystals < 12 ? `O cesto tem ${crystals} cristais: faltam alguns para chegar a 12.` : `O cesto tem ${crystals} cristais: passou de 12.`),
+    check: exactly(12),
   },
   {
-    label: 'Comparar preços',
-    objective: 'Compre pelo menos 20 cristais sem passar de 48 moedas.',
-    intro: 'Agora o difícil: preciso de 20 cristais para os lampiões e só tenho 48 moedas. Nem todo pacote grande sai barato!',
-    purse: 48,
-    check: (crystals, cost) => {
-      if (cost > 48) return `O total deu ${cost} moedas: faltaram ${cost - 48} na bolsa.`;
-      if (crystals < 20) return `A compra custaria ${cost} moedas e daria ${crystals} cristais. Os lampiões precisam de 20.`;
-      return null;
-    },
+    label: 'Pedido de 17',
+    objective: 'Agora junte exatamente 17 cristais e leve ao balcão.',
+    intro: 'Agora um pedido esquisito: exatamente 17 cristais. Com pacotes de 4, 6 e 5, será que dá? Tem mais de um jeito!',
+    purse: null,
+    check: exactly(17),
   },
 ];
 
-function mountStallsWorld(api) {
+/** r2c: preço por cristal e desconto (bolsa limitada). */
+const PRICE_STAGES = [
+  {
+    label: 'Preço por cristal',
+    objective: 'Compre pelo menos 20 cristais sem passar de 50 moedas.',
+    intro: 'Preciso de 20 cristais para os lampiões e tenho 50 moedas. Os pacotes são de tamanhos diferentes: em qual banca cada cristal sai mais barato?',
+    purse: 50,
+    discounts: {},
+    check: atLeastWithin(20, 50),
+  },
+  {
+    label: 'Desconto',
+    objective: 'A Banca da Estrela entrou em promoção (20% de desconto). Compre pelo menos 20 cristais sem passar de 48 moedas.',
+    intro: 'Notícia boa: a Banca da Estrela está com 20% de desconto! Mas minha bolsa encolheu para 48 moedas. E agora, qual banca compensa?',
+    purse: 48,
+    discounts: { estrela: 0.2 },
+    check: atLeastWithin(20, 48),
+  },
+];
+
+function mountStalls(api, STALL_STAGES, winMessage) {
   let stageIndex = 0;
   let basket = []; // ids das bancas, um por pacote
   let receipt = null;
@@ -76,7 +92,7 @@ function mountStallsWorld(api) {
 
   const stage = () => STALL_STAGES[stageIndex];
   const crystals = () => basket.reduce((sum, id) => sum + STALLS.find((s) => s.id === id).size, 0);
-  const cost = () => basket.reduce((sum, id) => sum + packCost(STALLS.find((s) => s.id === id)), 0);
+  const cost = () => basket.reduce((sum, id) => sum + packCost(STALLS.find((s) => s.id === id), stage()), 0);
   const record = () => api.record(['Etapa', 'Lua', 'Sol', 'Estrela', 'Cristais', 'Moedas'], rows);
 
   const basketItem = {
@@ -108,7 +124,8 @@ function mountStallsWorld(api) {
       label: `${stall.name}: ${stall.size} cristais por ${stall.price} moedas`,
       draw: (ctx) => {
         drawTag(ctx, stall.x, stall.y - 58, `${stall.size} por ${stall.price}`);
-        if (stall.discount) drawTag(ctx, stall.x + 22, stall.y - 70, `-${stall.discount * 100}%`, { fill: '#c2453b', ink: '#fff6dc' });
+        const discount = stage().discounts?.[stall.id];
+        if (discount) drawTag(ctx, stall.x + 22, stall.y - 70, `-${discount * 100}%`, { fill: '#c2453b', ink: '#fff6dc' });
       },
       onInteract: () => {
         if (basket.length >= 10) {
@@ -174,7 +191,7 @@ function mountStallsWorld(api) {
     basket = [];
     refreshHands();
     if (stageIndex === STALL_STAGES.length - 1) {
-      api.win(`Com ${price} moedas vieram ${total} cristais. Os lampiões do Mercado voltaram a acender!`);
+      api.win(winMessage(total, price));
       return;
     }
     api.say(STALL_STAGES[stageIndex + 1].intro, 'ok');
@@ -196,25 +213,48 @@ function mountStallsWorld(api) {
   startStage(0);
 }
 
+const mountGroupingWorld = (api) => mountStalls(api, GROUP_STAGES, (total) => `${total} cristais, sem sobrar nenhum! As encomendas do Mercado estão em dia.`);
+const mountPricesWorld = (api) => mountStalls(api, PRICE_STAGES, (total, price) => `Com ${price} moedas vieram ${total} cristais. Os lampiões do Mercado voltaram a acender!`);
+
 export default {
   r2a: {
     title: 'Bancas do Mercado',
     region: 'r2',
     npc: 'orin',
     mode: 'world',
-    stages: STALL_STAGES.map((stage) => stage.label),
-    greeting: STALL_STAGES[0].intro,
-    context: 'Cada banca do Mercado vende pacotes de tamanho e preço diferentes, e uma delas está com desconto. Orin precisa primeiro de uma quantidade exata de cristais e depois de 20 cristais com só 48 moedas.',
-    goal: 'Juntar exatamente 12 cristais; depois comprar pelo menos 20 cristais sem passar de 48 moedas.',
-    concept: 'Agrupamento e multiplicação; razão entre preço e quantidade; comparação de razões; desconto percentual',
-    prerequisites: 'Multiplicação e divisão; ideia de porcentagem',
-    relation: 'Etapa 1: 12 = 3 × 4 = 2 × 6. Etapa 2: Lua 2,5 moedas por cristal; Sol 3; Estrela 15 × 0,8 ÷ 5 = 2,4',
-    categories: ['operações', 'proporcionalidade', 'porcentagem'],
+    stages: GROUP_STAGES.map((stage) => stage.label),
+    greeting: GROUP_STAGES[0].intro,
+    context: 'Cada banca do Mercado vende pacotes de tamanho diferente: 4, 6 ou 5 cristais. Orin precisa de quantidades exatas para as encomendas.',
+    goal: 'Juntar exatamente 12 cristais e depois exatamente 17, combinando pacotes de 4, 6 e 5.',
+    concept: 'Agrupamento, adição de parcelas iguais e multiplicação; decomposição de um número',
+    prerequisites: 'Adição e multiplicação',
+    relation: '12 = 3 × 4 = 2 × 6; 17 = 2 × 6 + 5 = 3 × 4 + 5',
+    categories: ['operações'],
     hints: [
-      'Encoste numa banca e aperte E para pôr um pacote no cesto. A etiqueta mostra quantos cristais vêm no pacote e quanto custa. A caixa de devolução esvazia o cesto.',
-      'Pacotes maiores nem sempre saem mais baratos. Compare quanto custa cada cristal em cada banca, lembrando o desconto de 20% da Banca da Estrela.',
-      'Escolha a banca em que cada cristal sai mais barato e veja quantos pacotes dela chegam a 20 cristais.',
+      'Encoste numa banca e aperte E para pôr um pacote no cesto. A etiqueta mostra quantos cristais vêm no pacote. A caixa de devolução esvazia o cesto.',
+      'Para 12, tente usar pacotes de um só tamanho: quantos de 4? Quantos de 6?',
+      'Para 17, que é ímpar, você vai precisar de um número ímpar de pacotes de 5. Comece com um pacote de 5 e veja quanto falta.',
     ],
-    mountWorld: mountStallsWorld,
+    mountWorld: mountGroupingWorld,
+  },
+  r2c: {
+    title: 'Promoção',
+    region: 'r2',
+    npc: 'orin',
+    mode: 'world',
+    stages: PRICE_STAGES.map((stage) => stage.label),
+    greeting: PRICE_STAGES[0].intro,
+    context: 'As bancas vendem pacotes de tamanho e preço diferentes. Com a bolsa limitada, Orin precisa descobrir em que banca cada cristal sai mais barato, e depois uma das bancas entra em promoção.',
+    goal: 'Comprar pelo menos 20 cristais com 50 moedas (sem desconto) e depois com 48 moedas (com 20% de desconto na Banca da Estrela).',
+    concept: 'Razão entre preço e quantidade (preço por unidade); comparação de razões; desconto percentual',
+    prerequisites: 'Bancas do Mercado; Caldeirão de Orin (proporcionalidade)',
+    relation: 'Etapa 1: Lua 10 ÷ 4 = 2,5 moedas por cristal; Sol 18 ÷ 6 = 3; Estrela 15 ÷ 5 = 3. Etapa 2: Estrela 15 × 0,8 = 12 por 5 cristais = 2,4 por cristal',
+    categories: ['proporcionalidade', 'porcentagem'],
+    hints: [
+      'Pacotes maiores nem sempre saem mais baratos. Divida o preço do pacote pelo número de cristais para saber quanto custa cada cristal em cada banca.',
+      'Na primeira compra, só uma banca deixa 20 cristais caberem em 50 moedas. Na segunda, calcule o preço da Estrela com 20% de desconto: 20% de 15 moedas são 3 moedas.',
+      'Com o desconto, o pacote da Estrela custa 12 moedas por 5 cristais. Quantos pacotes dão 20 cristais, e quanto isso custa?',
+    ],
+    mountWorld: mountPricesWorld,
   },
 };
