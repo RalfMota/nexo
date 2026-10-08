@@ -244,3 +244,29 @@ test('Ponto de Mudança: a placa no marco onde as retas se cruzam', async ({ pag
   expect(await missionDone(page, 'r4d')).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('Reacender o Núcleo: testes, gráfico pelos próprios pontos e energia 50', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'f1');
+  for (const crystals of [2, 6]) { // energia 14 e 30
+    await useObject(page, 'crystal-pile', crystals);
+    await useObject(page, 'core-socket');
+    await useObject(page, 'core-lever');
+  }
+  await useObject(page, 'reading-0'); // reta errada: não passa pelos pontos
+  await useObject(page, 'light-board');
+  await useObject(page, 'reading-1'); // E = 4c + 6
+  await useObject(page, 'light-board');
+  await useObject(page, 'crystal-pile', 10); // 46: falta energia
+  await useObject(page, 'core-socket');
+  await useObject(page, 'core-lever');
+  expect(await missionDone(page, 'f1')).toBe(false);
+  await useObject(page, 'crystal-pile', 11); // 50
+  await useObject(page, 'core-socket');
+  await useObject(page, 'core-lever');
+  expect(await missionDone(page, 'f1')).toBe(true);
+  expect(errors).toEqual([]);
+});
