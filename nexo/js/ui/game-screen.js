@@ -8,7 +8,6 @@ import { leaveMission } from '../game/session.js';
 import { hudMarkup, mountHud, setWeatherLabel } from './hud.js';
 import { onWeatherChange } from '../world/weather.js';
 import { mountDialogue, closeDialogue, isDialogueOpen } from './dialogue.js';
-import { mountMissionLayer } from './mission-view.js';
 import { openModal, closeModal, isModalOpen } from './modal.js';
 import { openMapView } from './map-view.js';
 import { openJournal } from './journal.js';
@@ -36,12 +35,10 @@ export function showGame() {
       </div>
       <button type="button" class="btn btn--crystal touch-action" aria-label="Interagir">E</button>
       <div class="dialogue frame" hidden></div>
-      <div class="mission-layer"></div>
     </div>`;
 
   const game = qs('.game', app);
   mountDialogue(qs('.dialogue', game));
-  mountMissionLayer(qs('.mission-layer', game));
   mountHud(game, runAction);
   stopWeatherLabel = onWeatherChange((weather) => setWeatherLabel(`${weather.icon} ${weather.label}`));
   startWorld(qs('.game__world', game), {

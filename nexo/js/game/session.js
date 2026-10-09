@@ -13,7 +13,6 @@ import { runtime } from '../core/runtime.js';
 import { logEvent } from '../core/research-log.js';
 import { playSfx } from '../core/sfx.js';
 import { LAWS, PAGES } from '../data/codex.js';
-import { openMissionView } from '../ui/mission-view.js';
 import { openQuestTracker } from '../ui/quest-tracker.js';
 import { closeModal } from '../ui/modal.js';
 import { closeDialogue } from '../ui/dialogue.js';
@@ -62,18 +61,12 @@ export function startMission(missionId) {
     onNext: startMission,
   };
 
-  // Missão de mundo: acontece no mapa, acompanhada por um rastreador no HUD (sem janela)
-  if (mission.mode === 'world') {
-    session.inWorld = true;
-    session.npc = mission.npc;
-    session.view = openQuestTracker(viewOptions);
-    session.talk = () => session.view.repeat();
-    mission.mountWorld(createMissionApi(session));
-    return;
-  }
-
-  session.view = openMissionView(viewOptions);
-  mission.mount(session.view.stage, createMissionApi(session));
+  // Todas as missões acontecem no mapa, acompanhadas por um rastreador no HUD (sem janela)
+  session.inWorld = true;
+  session.npc = mission.npc;
+  session.view = openQuestTracker(viewOptions);
+  session.talk = () => session.view.repeat();
+  mission.mountWorld(createMissionApi(session));
 }
 
 /** Funções que cada missão usa para comunicar o que aconteceu. */

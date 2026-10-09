@@ -129,7 +129,6 @@ css/
   base.css            cores, tipografia, botões, formulários
   screens.css         título e criação de personagem
   game.css            HUD, barra de ferramentas, diálogos, janelas
-  mission.css         janela de missão e componentes das mecânicas
   profiles.css        escolha de perfil e Painel do Professor
 js/
   main.js             inicialização
