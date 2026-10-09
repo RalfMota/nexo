@@ -16,14 +16,14 @@ const at = (x, y) => (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H ? 'T' : ground[
 
 /* ---------- Grama ao vento ---------- */
 
-/** Tufos fixos (posição sorteada uma vez por bloco de grama). */
-const TUFTS = [];
+/** Tufos fixos (posição sorteada uma vez por bloco de grama), agrupados por linha do mapa. */
+const TUFT_ROWS = Array.from({ length: MAP_H }, () => []);
 for (let y = 0; y < MAP_H; y++) {
   for (let x = 0; x < MAP_W; x++) {
     if (ground[y][x] !== '.') continue;
     const count = hash(x, y, 300) > 0.35 ? 2 : 1;
     for (let i = 0; i < count; i++) {
-      TUFTS.push({
+      TUFT_ROWS[y].push({
         x: x * TILE + 3 + Math.floor(hash(x, y, 301 + i) * 26),
         y: y * TILE + 8 + Math.floor(hash(x, y, 311 + i) * 22),
         h: 3 + Math.floor(hash(x, y, 321 + i) * 3),
@@ -47,28 +47,63 @@ export function wind(x, y, t) {
   return (sway + gust) * windStrength;
 }
 
+// Tufos visíveis no quadro e o quanto cada um se curva (listas reaproveitadas a cada quadro)
+const shown = [];
+const bends = [];
+
+/**
+ * Grama ao vento. Só percorre as linhas do mapa que estão na tela e pinta em três passadas,
+ * uma por cor (base, meio e ponta): trocar a cor do pincel a cada pedacinho era a parte mais
+ * cara do quadro.
+ */
 export function drawGrass(ctx, t, view, player) {
   const calm = prefersCalm();
-  for (const tuft of TUFTS) {
-    if (tuft.x < view.x - 8 || tuft.x > view.x + view.w + 8 || tuft.y < view.y - 8 || tuft.y > view.y + view.h + 8) continue;
-    let bend = calm ? 0 : wind(tuft.x, tuft.y, t + tuft.phase * 0.05);
-    // A grama se afasta dos pés do jogador
-    if (player) {
-      const dx = tuft.x - player.x;
-      const dy = tuft.y - player.y;
-      if (Math.abs(dx) < 12 && Math.abs(dy) < 8) bend += Math.sign(dx || 1) * (12 - Math.abs(dx)) * 0.25;
+  shown.length = 0;
+  bends.length = 0;
+  const firstRow = Math.max(0, Math.floor((view.y - 8) / TILE));
+  const lastRow = Math.min(MAP_H - 1, Math.floor((view.y + view.h + 40) / TILE));
+  for (let row = firstRow; row <= lastRow; row++) {
+    for (const tuft of TUFT_ROWS[row]) {
+      if (tuft.x < view.x - 8 || tuft.x > view.x + view.w + 8 || tuft.y < view.y - 8 || tuft.y > view.y + view.h + 8) continue;
+      let bend = calm ? 0 : wind(tuft.x, tuft.y, t + tuft.phase * 0.05);
+      // A grama se afasta dos pés do jogador
+      if (player) {
+        const dx = tuft.x - player.x;
+        const dy = tuft.y - player.y;
+        if (Math.abs(dx) < 12 && Math.abs(dy) < 8) bend += Math.sign(dx || 1) * (12 - Math.abs(dx)) * 0.25;
+      }
+      shown.push(tuft);
+      bends.push(bend);
     }
+  }
+  // Base de cada folha
+  ctx.fillStyle = '#4f8428';
+  for (let i = 0; i < shown.length; i++) {
+    const tuft = shown[i];
     for (let b = -1; b <= 1; b++) {
-      const bx = tuft.x + b * 2;
+      const half = Math.ceil((tuft.h - Math.abs(b)) / 2);
+      ctx.fillRect(tuft.x + b * 2, tuft.y - half, 1, half);
+    }
+  }
+  // Meio, levemente curvado
+  ctx.fillStyle = '#6ea536';
+  for (let i = 0; i < shown.length; i++) {
+    const tuft = shown[i];
+    for (let b = -1; b <= 1; b++) {
       const h = tuft.h - Math.abs(b);
-      const offset = Math.round(bend * (0.7 + Math.abs(b) * 0.3) + b * 0.5);
       const half = Math.ceil(h / 2);
-      ctx.fillStyle = '#4f8428';
-      ctx.fillRect(bx, tuft.y - half, 1, half);
-      ctx.fillStyle = '#6ea536';
-      ctx.fillRect(bx + Math.round(offset / 2), tuft.y - h, 1, h - half);
-      ctx.fillStyle = '#c2e070';
-      ctx.fillRect(bx + offset, tuft.y - h - 1, 1, 1);
+      const offset = Math.round(bends[i] * (0.7 + Math.abs(b) * 0.3) + b * 0.5);
+      ctx.fillRect(tuft.x + b * 2 + Math.round(offset / 2), tuft.y - h, 1, h - half);
+    }
+  }
+  // Ponta clara, onde o vento leva mais
+  ctx.fillStyle = '#c2e070';
+  for (let i = 0; i < shown.length; i++) {
+    const tuft = shown[i];
+    for (let b = -1; b <= 1; b++) {
+      const h = tuft.h - Math.abs(b);
+      const offset = Math.round(bends[i] * (0.7 + Math.abs(b) * 0.3) + b * 0.5);
+      ctx.fillRect(tuft.x + b * 2 + offset, tuft.y - h - 1, 1, 1);
     }
   }
 }
