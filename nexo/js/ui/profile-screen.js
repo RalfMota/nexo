@@ -8,7 +8,7 @@
  */
 
 import { qs, qsa, escapeHtml } from '../core/dom.js';
-import { listStudents, createStudent, selectStudent, hasTeacherPin, setTeacherPin, checkTeacherPin } from '../core/state.js';
+import { listStudents, createStudent, selectStudent, activeStudent, hasTeacherPin, setTeacherPin, checkTeacherPin } from '../core/state.js';
 import { playerLook } from '../data/characters.js';
 import { drawPortrait } from '../art/characters.js';
 import { studentReport } from '../game/assessment.js';
@@ -127,11 +127,11 @@ function profileCard(student) {
     </button>`;
 }
 
-function enterAsStudent(id) {
+export function enterAsStudent(id) {
   if (!selectStudent(id)) return;
   leaveProfiles();
   // Sem personagem ainda: vai direto ao criador; com personagem: tela de título (continuar)
-  if (listStudents().find((student) => student.id === id)?.save?.player) {
+  if (activeStudent()?.save?.player) {
     showTitle();
   } else {
     showCreate();

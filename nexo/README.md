@@ -159,7 +159,8 @@ Cada missão é um objeto com textos (`context`, `goal`, `hints`), dados da Vis�
 Ao abrir o jogo aparece **Quem vai jogar?**:
 
 - **Aluno**: cada aluno escolhe o próprio nome na lista ou se cadastra em **Novo aluno**. No primeiro acesso ele vai direto para a criação do personagem; depois, para a tela de título (continuar, diário, **Trocar de perfil**). Cada aluno tem o seu progresso salvo separadamente.
-- **Professor**: botão **Área do professor** (ou o atalho **Ctrl + Shift + P**). No primeiro acesso o professor cria uma senha (mínimo de 4 caracteres). Depois, entra no **Painel do Professor**.
+- **Professor**: botão **Área do professor** (ou o atalho **Ctrl + Shift + P**). No primeiro acesso o professor cria uma senha (mínimo de 6 caracteres). Depois, entra no **Painel do Professor**.
+- **Administrador**: no Painel do Professor, **Entrar como administrador** abre um perfil com **todas as regiões, missões e desafios extras liberados**, para conhecer e testar o jogo inteiro. Ele só é acessível pela Área do professor (protegida pela senha), não aparece na escolha de perfil, nos relatórios nem no CSV, e nunca é enviado à turma online. O progresso dele fica salvo neste computador, como o de qualquer perfil.
 
 O Painel mostra a lista de alunos (com busca e cadastro) e, para cada um:
 

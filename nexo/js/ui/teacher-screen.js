@@ -10,7 +10,7 @@
 
 import { qs, qsa, escapeHtml } from '../core/dom.js';
 import {
-  listStudents, createStudent, renameStudent, resetStudent, deleteStudent, setStudentTrack,
+  listStudents, createStudent, renameStudent, resetStudent, deleteStudent, setStudentTrack, adminStudentId,
   setTeacherPin, checkTeacherPin, wipeAll, applySettings,
   teacherTurma, setTeacherTurma, computerTurma, setComputerTurma, turmaOf,
 } from '../core/state.js';
@@ -20,7 +20,7 @@ import { studentReport, STATUS, formatSeconds, formatPercent } from '../game/ass
 import { TOPICS } from '../data/curriculum.js';
 import { MISSIONS } from '../missions/index.js';
 import { openModal, closeModal } from './modal.js';
-import { studentAvatar, paintAvatars, showProfiles } from './profile-screen.js';
+import { studentAvatar, paintAvatars, showProfiles, enterAsStudent } from './profile-screen.js';
 
 const SUPPORT_LABELS = { autonomo: 'sem apoio', dicas: 'com dicas', apoio: 'com apoio' };
 
@@ -54,6 +54,7 @@ export function showTeacher() {
             <button type="button" class="btn btn--crystal btn--small" data-role="online">☁ Turma online</button>
             <button type="button" class="btn btn--ghost btn--small" data-role="export">Exportar turma (CSV)</button>
             <button type="button" class="btn btn--ghost btn--small" data-role="pin">Alterar senha</button>
+            <button type="button" class="btn btn--ghost btn--small" data-role="admin" title="Perfil com todas as regiões e missões liberadas, só para o professor">Entrar como administrador</button>
             <button type="button" class="btn btn--magic btn--small" data-role="exit">Sair do painel</button>
           </div>
         </header>
@@ -88,6 +89,7 @@ export function showTeacher() {
   qs('[data-role="online"]', app).addEventListener('click', openClassPanel);
   qs('[data-role="pin"]', app).addEventListener('click', changePin);
   qs('[data-role="exit"]', app).addEventListener('click', () => showProfiles());
+  qs('[data-role="admin"]', app).addEventListener('click', () => enterAsStudent(adminStudentId()));
   qs('[data-role="wipe"]', app).addEventListener('click', () => {
     if (!confirm('Apagar TODOS os alunos, progressos, registros e a senha do professor deste navegador? Exporte a turma antes.')) return;
     if (!confirm('Tem certeza? Isso não pode ser desfeito.')) return;

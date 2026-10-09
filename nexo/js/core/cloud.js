@@ -70,7 +70,7 @@ async function post(path, body) {
 
 /** Envia agora o progresso de um aluno (se ele estiver numa turma). */
 export async function syncStudent(student = activeStudent()) {
-  if (!student || !turmaOf(student)) return false;
+  if (!student || student.admin || !turmaOf(student)) return false;
   const waiting = pending.get(student.id);
   if (waiting) {
     clearTimeout(waiting.timer);
@@ -89,7 +89,7 @@ export async function syncStudent(student = activeStudent()) {
 /** Liga a sincronização automática (chamada uma vez, na inicialização). */
 export function initCloudSync() {
   onStateSaved((student) => {
-    if (!turmaOf(student)) return;
+    if (student.admin || !turmaOf(student)) return;
     clearTimeout(pending.get(student.id)?.timer);
     pending.set(student.id, { student, timer: setTimeout(() => syncStudent(student), SYNC_DELAY) });
   });

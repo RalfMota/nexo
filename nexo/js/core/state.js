@@ -169,11 +169,42 @@ export function saveState() {
 
 export const activeStudent = () => school.students[school.active] ?? null;
 
-/** Alunos em ordem alfabética, cada um com o save (somente leitura para relatórios). */
+/**
+ * Alunos em ordem alfabética, cada um com o save (somente leitura para relatórios). O perfil
+ * de administrador fica de fora: não aparece na escolha de perfil, nos relatórios nem no CSV.
+ */
 export function listStudents() {
   if (school.active && school.students[school.active]) school.students[school.active].save = snapshot(state);
-  return Object.values(school.students).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  return Object.values(school.students).filter((student) => !student.admin).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }
+
+/**
+ * Perfil de administrador deste computador: todas as regiões, missões e desafios extras
+ * liberados (save.dbg), para o professor conhecer e testar o jogo inteiro. Só se entra nele
+ * pela Área do professor (protegida pela senha) e ele nunca vai para a turma online.
+ * Devolve o ID (cria o perfil na primeira vez).
+ */
+export function adminStudentId() {
+  const existing = Object.values(school.students).find((student) => student.admin);
+  if (existing) {
+    existing.save = { ...existing.save, dbg: true };
+    writeSchool();
+    return existing.id;
+  }
+  const id = newId();
+  school.students[id] = {
+    id,
+    name: 'Administrador',
+    admin: true,
+    created: Date.now(),
+    lastSeen: Date.now(),
+    save: snapshot(Object.assign(createFreshState(), { dbg: true })),
+  };
+  writeSchool();
+  return id;
+}
+
+export const isAdminActive = () => Boolean(school.students[school.active]?.admin);
 
 export function createStudent(name) {
   const id = newId();

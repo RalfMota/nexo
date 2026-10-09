@@ -1,7 +1,7 @@
 /* NEXO — Tela de título do aluno: novo jogo, continuar, trocar de perfil, Modo Pesquisa e opções */
 
 import { qs, escapeHtml } from '../core/dom.js';
-import { state, DEBUG, saveState, startNewGame, activeStudent, resetStudent, signOut, turmaOf, computerTurma, setStudentTurma } from '../core/state.js';
+import { state, DEBUG, saveState, startNewGame, activeStudent, isAdminActive, resetStudent, signOut, turmaOf, computerTurma, setStudentTurma } from '../core/state.js';
 import { syncStudent, syncStatus, onSyncStatus, isValidCode, normalizeCode } from '../core/cloud.js';
 import { getBaseLayer } from '../world/renderer.js';
 import { openJournal } from './journal.js';
@@ -118,7 +118,7 @@ export function showTitle() {
           <p class="logo__tagline">Uma Jornada Matemática</p>
         </header>
         <nav class="title-menu frame" aria-label="Menu principal">
-          <p class="title-menu__who">Aluno: <b>${escapeHtml(student.name)}</b></p>
+          <p class="title-menu__who">${isAdminActive() ? '<b>Administrador</b> · todas as regiões e missões liberadas' : `Aluno: <b>${escapeHtml(student.name)}</b>`}</p>
           <button type="button" class="btn btn--crystal" data-role="new">Novo jogo</button>
           <button type="button" class="btn" data-role="continue" ${state.player ? '' : 'disabled'}>Continuar${state.player ? ` como ${state.player.name}` : ''}</button>
           <button type="button" class="btn btn--ghost" data-role="journal">Diário</button>

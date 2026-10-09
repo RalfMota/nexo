@@ -58,3 +58,43 @@ test('save antigo com as Bancas concluídas ganha a Promoção, sem fechar o cam
   });
   expect(result).toEqual({ r2c: true, oficinaAberta: true });
 });
+
+test('administrador: só pela Área do professor, com tudo liberado e fora da lista e da turma', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/');
+  // Um aluno comum, para conferir que o administrador não aparece na escolha de perfil
+  await page.getByLabel('Apelido ou código do novo aluno').fill('Lia');
+  await page.getByRole('button', { name: 'Entrar' }).first().click();
+  await page.evaluate(async () => (await import('/js/core/state.js')).signOut());
+  await page.reload();
+  // Área do professor: cria a senha e entra no painel
+  await page.getByRole('button', { name: /Área do professor/ }).click();
+  await page.getByLabel('Senha', { exact: true }).fill('senha-teste');
+  await page.getByLabel('Repita a senha').fill('senha-teste');
+  await page.getByRole('button', { name: 'Criar senha e entrar' }).click();
+  await page.getByRole('button', { name: 'Entrar como administrador' }).click();
+  await expect(page.getByText('Crie seu Reconector')).toBeVisible();
+  const result = await page.evaluate(async () => {
+    const st = await import('/js/core/state.js');
+    const P = await import('/js/game/progress.js');
+    const R = await import('/js/data/regions.js');
+    let sent = 0;
+    const original = window.fetch;
+    window.fetch = async () => { sent++; return new Response('{}'); };
+    st.setComputerTurma('ABCDEF');
+    const C = await import('/js/core/cloud.js');
+    await C.syncStudent();
+    window.fetch = original;
+    st.setComputerTurma(null);
+    return {
+      admin: st.isAdminActive(),
+      abertas: R.REGIONS.every((_, i) => P.isRegionOpen(i)),
+      extras: R.REGIONS.flatMap((region) => P.unlockedExtras(region)).length,
+      naLista: st.listStudents().map((student) => student.name),
+      enviados: sent,
+    };
+  });
+  expect(result).toEqual({ admin: true, abertas: true, extras: 3, naLista: ['Lia'], enviados: 0 });
+  expect(errors).toEqual([]);
+});
