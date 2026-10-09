@@ -140,7 +140,9 @@ js/
   missions/           um arquivo por região (*-world.js: missões no mapa) + world-kit.js
                       (alavancas, mostradores, etiquetas); prologue.js (Prólogo na praça);
                       kit/hands.js: mãos do jogador (pegar com limite, um tipo por vez, largar
-                      e o desenho acima da cabeça), usado pelas Comportas, Previsão, Caldeirão e Torre
+                      e o desenho acima da cabeça), usado por Sementes, Comportas, Jardim Espelhado,
+                      Cercas, Caldeirão, Previsão, Torre e Núcleo (Mercado e Rotas carregam um cesto
+                      ou uma caixa por vez e mantêm a lógica própria)
   engine/             motor Phaser: cenas Mundo e Interior, jogador, efeitos (ver "Motor do jogo")
   world/              mapa, camadas de desenho, entrada (teclado/toque), história (falas), moradores, clima
   art/                desenho em pixel art: terreno, construções, personagens

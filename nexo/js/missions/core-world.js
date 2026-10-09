@@ -13,7 +13,8 @@
  * Os eventos registrados para a pesquisa são os mesmos da versão em janela.
  */
 
-import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
+import { addQuestObject, clearQuestLayer, playAction, burst } from '../world/quest-layer.js';
+import { createHands } from './kit/hands.js';
 import { drawCrystalPile, drawCrystalHandful, drawEnergyMeter, drawPedestal, pedestalFace } from '../art/mission-props.js';
 import { TILE, tileFoot, drawTag, drawArrow, addLever } from './world-kit.js';
 import { CORE } from '../world/map.js';
@@ -127,39 +128,43 @@ function drawLightBoard(ctx, { points, rule, ruleOk, target, t }) {
 function mountCoreWorld(api) {
   const rows = [];
   let stage = 0; // 0 testar, 1 leitura, 2 energia 50, 3 concluído
-  let inHand = 0;
   let inserted = 0;
   let testsUsed = 0;
   let energy = 0;
   let energyTarget = 0;
-  let carryingReading = null;
   let clock = 0;
   let projected = null; // { index, until }: tabuleta errada projetada por um instante
   let chosenRule = null; // a reta certa, que fica no painel
 
   const record = () => api.record(['Cristais', 'Energia'], rows);
 
-  const crystalItem = {
-    label: 'cristais',
-    draw: (ctx) => {
-      drawCrystalHandful(ctx, 0, 6, inHand);
-      drawTag(ctx, 0, -10, String(inHand));
+  // Mãos: cristais (um por vez, até o limite do Núcleo) ou uma tabuleta de leitura
+  const hands = createHands({
+    say: api.say,
+    kinds: {
+      cristal: {
+        name: 'cristais',
+        draw: (ctx, held) => {
+          drawCrystalHandful(ctx, 0, 6, held.count);
+          drawTag(ctx, 0, -10, String(held.count));
+        },
+      },
+      tabuleta: {
+        name: 'uma tabuleta',
+        label: 'tabuleta de leitura',
+        draw: (ctx, held) => {
+          ctx.fillStyle = '#857f75';
+          ctx.fillRect(-11, -14, 22, 16);
+          ctx.fillStyle = '#f1e6cb';
+          ctx.fillRect(-10, -13, 20, 14);
+          drawMiniGraph(ctx, -10, -13, 20, 14, READINGS[held.items[0]].rule);
+        },
+      },
     },
-  };
-  const readingItem = {
-    label: 'tabuleta de leitura',
-    draw: (ctx) => {
-      ctx.fillStyle = '#857f75';
-      ctx.fillRect(-11, -14, 22, 16);
-      ctx.fillStyle = '#f1e6cb';
-      ctx.fillRect(-10, -13, 20, 14);
-      drawMiniGraph(ctx, -10, -13, 20, 14, READINGS[carryingReading].rule);
-    },
-  };
-  const refreshHands = () => {
-    if (carryingReading != null) setCarried(readingItem);
-    else setCarried(inHand > 0 ? crystalItem : null);
-  };
+    messages: { busy: () => 'Suas mãos já estão ocupadas. Use o que está carregando antes de pegar outra coisa.' },
+  });
+  const inHand = () => (hands.holds('cristal') ? hands.count : 0);
+  const carrying = () => (hands.holds('tabuleta') ? hands.items[0] : null);
 
   addQuestObject({
     id: 'crystal-pile',
@@ -169,13 +174,11 @@ function mountCoreWorld(api) {
     enabled: () => stage === 0 || stage === 2,
     draw: (ctx, t) => drawCrystalPile(ctx, PILE.x, PILE.y, t),
     onInteract: () => {
-      if (inHand + inserted >= MAX_CRYSTALS) {
+      if (inHand() + inserted >= MAX_CRYSTALS) {
         api.say(`O Núcleo aceita no máximo ${MAX_CRYSTALS} cristais.`, 'warn');
         return;
       }
-      inHand++;
-      playAction('crouch');
-      refreshHands();
+      if (hands.take('cristal')) playAction('crouch');
     },
   });
 
@@ -190,25 +193,21 @@ function mountCoreWorld(api) {
       drawTag(ctx, METER.x, METER.y - 82, `energia: ${Math.round(energy)}`, { fill: '#1d1a38', ink: '#7ff0e0' });
       if (stage !== 1 && stage < 3) drawTag(ctx, CORE_POINT.x, CORE_POINT.y - 120, `no Núcleo: ${crystalsLabel(inserted)}`, { fill: '#1d1a38', ink: '#7ff0e0' });
       if (stage === 0) drawTag(ctx, LEVER.x, LEVER.y - 34, `testes: ${TESTS - testsUsed}`);
-      if (inHand > 0) drawArrow(ctx, CORE_POINT.x, CORE_POINT.y - 132, t);
+      if (inHand() > 0) drawArrow(ctx, CORE_POINT.x, CORE_POINT.y - 132, t);
     },
     onInteract: () => {
-      if (carryingReading != null) {
+      if (carrying() != null) {
         api.say('As tabuletas se encaixam no painel de luz, à esquerda do Núcleo.', 'warn');
         return;
       }
-      if (inHand > 0) {
-        inserted += inHand;
-        inHand = 0;
+      if (inHand() > 0) {
+        inserted += hands.dropAll().length;
         playAction('use');
         burst(CORE_POINT.x, CORE_POINT.y - 60, 'sparkle', 8);
-        refreshHands();
         return;
       }
-      if (inserted > 0 && stage !== 1) {
+      if (inserted > 0 && stage !== 1 && hands.take('cristal')) {
         inserted--;
-        inHand++;
-        refreshHands();
         return;
       }
       api.say(stage === 1 ? 'Leve uma tabuleta ao painel de luz, à esquerda do Núcleo.' : 'Pegue cristais na pilha e traga até o Núcleo.', 'warn');
@@ -233,11 +232,11 @@ function mountCoreWorld(api) {
         target: stage >= 2 ? TARGET : null,
         t,
       });
-      if (carryingReading != null) drawArrow(ctx, BOARD.x, BOARD.y - GRAPH.h - 62, t);
+      if (carrying() != null) drawArrow(ctx, BOARD.x, BOARD.y - GRAPH.h - 62, t);
     },
     onInteract: () => {
-      if (carryingReading != null) {
-        projectReading(carryingReading);
+      if (carrying() != null) {
+        projectReading(carrying());
         return;
       }
       api.say(stage === 0
@@ -254,20 +253,19 @@ function mountCoreWorld(api) {
       y: reading.at.y + 2,
       reach: 26,
       label: `${reading.label}: pegar a tabuleta`,
-      enabled: () => stage === 1 && carryingReading == null,
+      enabled: () => stage === 1 && carrying() == null,
       draw: (ctx) => {
         if (stage !== 1) return;
         drawPedestal(ctx, reading.at.x, reading.at.y);
-        if (carryingReading !== index) {
+        if (carrying() !== index) {
           const face = pedestalFace(reading.at.x, reading.at.y);
           drawMiniGraph(ctx, face.left, face.top, face.w, face.h, reading.rule);
         }
         drawTag(ctx, reading.at.x, reading.at.y - 44, reading.label);
       },
       onInteract: () => {
-        carryingReading = index;
+        hands.set('tabuleta', [index]);
         playAction('crouch');
-        refreshHands();
       },
     });
   });
@@ -311,8 +309,7 @@ function mountCoreWorld(api) {
   /** Encaixa a tabuleta no painel: a reta dela aparece sobre os pontos medidos. */
   function projectReading(index) {
     const reading = READINGS[index];
-    carryingReading = null;
-    refreshHands();
+    hands.dropAll();
     playAction('use');
     if (api.attempt(index === CORRECT_READING, { leitura: index + 1 })) {
       chosenRule = reading.rule;

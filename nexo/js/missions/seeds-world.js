@@ -8,7 +8,8 @@
  *      o que não dá para todos volta no saco, carregado até o celeiro.
  */
 
-import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
+import { addQuestObject, clearQuestLayer, playAction, burst } from '../world/quest-layer.js';
+import { createHands } from './kit/hands.js';
 import { drawSeedSack, drawSeedBowl, drawSeederMachine, drawSoilBed, drawPlantedSeed } from '../art/items.js';
 
 const TILE = 32;
@@ -56,8 +57,6 @@ const STAGES = [
 function mountSeedsWorld(api) {
   let stageIndex = 0;
   let inSack = 0;
-  let inHand = 0;
-  let sackCarried = false;
   let sprouting = 0;
   const counts = Array(BEDS.length).fill(0);
   const rows = [];
@@ -68,22 +67,24 @@ function mountSeedsWorld(api) {
 
   /* ---------- O que o jogador segura ---------- */
 
-  const handItem = {
-    label: 'sementes',
-    draw: (ctx) => drawHandful(ctx, inHand),
-  };
-  const sackItem = {
-    label: 'saco de sementes',
-    draw: (ctx) => {
-      ctx.translate(0, -4);
-      drawSack(ctx, 0, 10, inSack, 0.8);
+  // Mãos: sementes soltas (até 10) ou, na etapa 3, o saco inteiro
+  const hands = createHands({
+    say: api.say,
+    kinds: {
+      semente: { name: 'sementes', limit: MAX_IN_HAND, draw: (ctx, held) => drawHandful(ctx, held.count) },
+      saco: {
+        name: 'o saco de sementes',
+        label: 'saco de sementes',
+        draw: (ctx) => {
+          ctx.translate(0, -4);
+          drawSack(ctx, 0, 10, inSack, 0.8);
+        },
+      },
     },
-  };
-
-  function refreshHands() {
-    if (sackCarried) setCarried(sackItem);
-    else setCarried(inHand > 0 ? handItem : null);
-  }
+    messages: { full: () => 'Suas mãos estão cheias. Plante algumas antes de pegar mais.' },
+  });
+  const inHand = () => (hands.holds('semente') ? hands.count : 0);
+  const sackCarried = () => hands.holds('saco');
 
   /* ---------- Objetos no mapa ---------- */
 
@@ -92,9 +93,9 @@ function mountSeedsWorld(api) {
     x: SACK.x,
     y: SACK.y,
     label: 'Saco de sementes',
-    enabled: () => !sackCarried,
+    enabled: () => !sackCarried(),
     draw: (ctx) => {
-      if (!sackCarried) drawSack(ctx, SACK.x, SACK.y, inSack, 1);
+      if (!sackCarried()) drawSack(ctx, SACK.x, SACK.y, inSack, 1);
     },
     onInteract: takeFromSack,
   });
@@ -134,9 +135,9 @@ function mountSeedsWorld(api) {
     x: BARN_DOOR.x,
     y: BARN_DOOR.y,
     label: 'Porta do celeiro',
-    enabled: () => sackCarried,
+    enabled: () => sackCarried(),
     draw: (ctx, t) => {
-      if (sackCarried) drawArrow(ctx, BARN_DOOR.x, BARN_DOOR.y - 46, t);
+      if (sackCarried()) drawArrow(ctx, BARN_DOOR.x, BARN_DOOR.y - 46, t);
     },
     onInteract: deliverSack,
   });
@@ -146,53 +147,47 @@ function mountSeedsWorld(api) {
   function takeFromSack() {
     if (stage().kind === 'remainder') {
       // Na etapa 3 o saco vai junto: sementes na mão voltam para ele
-      inSack += inHand;
-      inHand = 0;
-      sackCarried = true;
+      inSack += inHand();
+      hands.set('saco', [1]);
       playAction('crouch');
-      refreshHands();
       return;
     }
     if (inSack === 0) {
       api.say('O saco está vazio.', 'warn');
       return;
     }
-    if (inHand >= MAX_IN_HAND) {
-      api.say('Suas mãos estão cheias. Plante algumas antes de pegar mais.', 'warn');
-      return;
-    }
+    if (!hands.take('semente')) return;
     inSack--;
-    inHand++;
     playAction('crouch');
     burst(SACK.x, SACK.y - 14, 'sparkle', 5);
-    refreshHands();
   }
 
   function useBed(index) {
     const bed = BEDS[index];
-    if (inHand > 0) {
-      inHand--;
+    if (inHand() > 0) {
+      hands.drop();
       counts[index]++;
       playAction('dig');
       burst(bed.x, bed.y, 'dust', 6);
-      refreshHands();
       checkAllPlaced();
       return;
     }
     // Mãos vazias: tira uma semente do canteiro (para a mão, ou para o saco se ele estiver junto)
     if (counts[index] > 0) {
       counts[index]--;
-      if (sackCarried) inSack++;
-      else inHand++;
+      if (sackCarried()) inSack++;
+      else if (!hands.take('semente')) {
+        counts[index]++;
+        return;
+      }
       playAction('crouch');
-      refreshHands();
       return;
     }
     api.say(stage().kind === 'remainder' ? 'Use a semeadeira para plantar uma rodada.' : 'Pegue sementes no saco primeiro.', 'warn');
   }
 
   function useSeeder() {
-    if (inHand > 0) {
+    if (inHand() > 0) {
       api.say('Guarde as sementes da mão num canteiro antes de usar a semeadeira.', 'warn');
       return;
     }
@@ -207,13 +202,12 @@ function mountSeedsWorld(api) {
       counts[index]++;
       burst(BEDS[index].x, BEDS[index].y, 'sparkle', 4);
     });
-    refreshHands();
   }
 
   /** Etapas 1 e 2: quando todas as sementes saíram do saco e das mãos, Tainá confere. */
   function checkAllPlaced() {
     const kind = stage().kind;
-    if (kind === 'remainder' || inSack > 0 || inHand > 0) return;
+    if (kind === 'remainder' || inSack > 0 || inHand() > 0) return;
     const values = activeBeds().map((index) => counts[index]);
     const ok = kind === 'count'
       ? values.every((value) => value === stage().target)
@@ -230,7 +224,7 @@ function mountSeedsWorld(api) {
   }
 
   function deliverSack() {
-    if (inHand > 0) {
+    if (inHand() > 0) {
       api.say('Plante as sementes da mão antes de guardar o saco.', 'warn');
       return;
     }
@@ -244,8 +238,7 @@ function mountSeedsWorld(api) {
       etapa: 3, porCanteiro: equal ? per : values.join('/'), usadas: used, sobra: inSack,
     });
     if (ok) {
-      sackCarried = false;
-      refreshHands();
+      hands.dropAll();
       sprouting = 0.01;
       grow();
       burst(BARN_DOOR.x, BARN_DOOR.y - 20, 'success', 20);
@@ -286,9 +279,7 @@ function mountSeedsWorld(api) {
   function startStage(index, announce = true) {
     stageIndex = index;
     inSack = stage().seeds;
-    inHand = 0;
-    sackCarried = false;
-    refreshHands();
+    hands.dropAll();
     api.setStage(index);
     api.setObjective(stage().objective);
     if (announce) api.say(stage().intro);

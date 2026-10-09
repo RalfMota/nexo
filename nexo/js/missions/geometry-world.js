@@ -9,7 +9,8 @@
  *   3. Mesma área, menos cerca: 24 quadradinhos gastando o mínimo de tábuas (4 × 6).
  */
 
-import { addQuestObject, clearQuestLayer, setCarried, playAction, burst } from '../world/quest-layer.js';
+import { addQuestObject, clearQuestLayer, playAction, burst } from '../world/quest-layer.js';
+import { createHands } from './kit/hands.js';
 import {
   FLOWER_COLORS, drawPlot, drawStonePath, drawFlower, drawSeedlingBasket,
   drawBoardPile, drawBoardHandful, drawFence, drawAreaSquares,
@@ -70,7 +71,6 @@ function cellOrigin(stage, col, row) {
 function mountMirrorWorld(api) {
   let stageIndex = 0;
   let planted = {}; // "col,row" → cor, no lado que o jogador planta
-  let hand = { color: null, count: 0 };
   let wrong = new Set();
   let blooming = 0;
   const rows = [];
@@ -83,14 +83,19 @@ function mountMirrorWorld(api) {
   };
   const record = () => api.record(['Etapa', 'Flores espelhadas'], rows);
 
-  const handItem = {
-    label: 'mudas de flor',
-    draw: (ctx) => {
-      for (let i = 0; i < Math.min(hand.count, 3); i++) drawFlower(ctx, -4 + i * 4, 6, FLOWER_COLORS[hand.color]);
-      drawTag(ctx, 0, -12, String(hand.count));
-    },
+  const drawSeedlings = (color) => (ctx, hands) => {
+    for (let i = 0; i < Math.min(hands.count, 3); i++) drawFlower(ctx, -4 + i * 4, 6, FLOWER_COLORS[color]);
+    drawTag(ctx, 0, -12, String(hands.count));
   };
-  const refreshHands = () => setCarried(hand.count > 0 ? handItem : null);
+  const hands = createHands({
+    say: api.say,
+    limit: MAX_SEEDLINGS,
+    kinds: Object.fromEntries(Object.keys(BASKETS).map((color) => [color, { name: `mudas ${COLOR_NAMES[color]}s`, label: 'mudas de flor', draw: drawSeedlings(color) }])),
+    messages: {
+      busy: (current) => `Você está com mudas ${COLOR_NAMES[current]}s. Plante ou devolva antes de pegar outra cor.`,
+      full: () => 'Suas mãos estão cheias de mudas.',
+    },
+  });
 
   // Caminho de pedras e flores-modelo
   addQuestObject({
@@ -159,20 +164,10 @@ function mountMirrorWorld(api) {
       draw: (ctx, t) => {
         if (!stage().flowers.some(([, , c]) => c === color)) return;
         drawSeedlingBasket(ctx, spot.x, spot.y, FLOWER_COLORS[color]);
-        if (hand.count === 0 && Object.keys(planted).length === 0) drawArrow(ctx, spot.x, spot.y - 26, t);
+        if (hands.empty && Object.keys(planted).length === 0) drawArrow(ctx, spot.x, spot.y - 26, t);
       },
       onInteract: () => {
-        if (hand.count && hand.color !== color) {
-          api.say(`Você está com mudas ${COLOR_NAMES[hand.color]}s. Plante ou devolva antes de pegar outra cor.`, 'warn');
-          return;
-        }
-        if (hand.count >= MAX_SEEDLINGS) {
-          api.say('Suas mãos estão cheias de mudas.', 'warn');
-          return;
-        }
-        hand = { color, count: hand.count + 1 };
-        playAction('crouch');
-        refreshHands();
+        if (hands.take(color)) playAction('crouch');
       },
     });
   }
@@ -181,27 +176,24 @@ function mountMirrorWorld(api) {
     const k = key(col, row);
     wrong.delete(k);
     if (planted[k]) {
-      if (hand.count && hand.color !== planted[k]) {
+      if (!hands.empty && hands.kind !== planted[k]) {
         api.say('Essa cova já tem uma flor de outra cor. Com as mãos vazias, você pode tirá-la.', 'warn');
         return;
       }
-      hand = { color: planted[k], count: hand.count + 1 };
+      if (!hands.take(planted[k])) return;
       delete planted[k];
       playAction('crouch');
-      refreshHands();
       return;
     }
-    if (!hand.count) {
+    if (hands.empty) {
       api.say('Pegue mudas no cesto primeiro.', 'warn');
       return;
     }
-    planted[k] = hand.color;
-    hand = { color: hand.color, count: hand.count - 1 };
-    if (!hand.count) hand.color = null;
+    planted[k] = hands.kind;
+    hands.drop();
     playAction('dig');
     const o = cellOrigin(stage(), col, row);
     burst(o.x + CELL / 2, o.y + CELL / 2, 'dust', 5);
-    refreshHands();
     check();
   }
 
@@ -239,9 +231,8 @@ function mountMirrorWorld(api) {
     stageIndex = index;
     planted = {};
     wrong = new Set();
-    hand = { color: null, count: 0 };
+    hands.dropAll();
     blooming = 0;
-    refreshHands();
     api.setStage(index);
     api.setObjective(stage().objective);
     if (announce) api.say(stage().intro);
@@ -287,7 +278,6 @@ const FENCE_STAGES = [
 
 function mountFenceWorld(api) {
   let stageIndex = 0;
-  let inHand = 0;
   let inCart = 0;
   let built = null; // { w, h, boards }
   const rows = [];
@@ -295,14 +285,18 @@ function mountFenceWorld(api) {
   const stage = () => FENCE_STAGES[stageIndex];
   const record = () => api.record(['Etapa', 'Cercado', 'Tábuas', 'Quadradinhos'], rows);
 
-  const handItem = {
-    label: 'tábuas',
-    draw: (ctx) => {
-      drawBoardHandful(ctx, 0, 6, inHand);
-      drawTag(ctx, 0, -12, String(inHand));
+  const hands = createHands({
+    say: api.say,
+    kinds: {
+      tabua: {
+        name: 'tábuas',
+        draw: (ctx, held) => {
+          drawBoardHandful(ctx, 0, 6, held.count);
+          drawTag(ctx, 0, -12, String(held.count));
+        },
+      },
     },
-  };
-  const refreshHands = () => setCarried(inHand > 0 ? handItem : null);
+  });
 
   const dialW = addDial({ id: 'fence-w', ...DIAL_W, label: 'Largura', min: 1, max: 8, value: 3, visible: () => stageIndex > 0, caption: 'largura' });
   const dialH = addDial({ id: 'fence-h', ...DIAL_H, label: 'Comprimento', min: 1, max: 7, value: 3, visible: () => stageIndex > 0, caption: 'comprimento' });
@@ -341,13 +335,12 @@ function mountFenceWorld(api) {
       if (stageIndex === 0) drawBoardPile(ctx, BOARD_PILE.x, BOARD_PILE.y);
     },
     onInteract: () => {
-      if (inHand + inCart >= MAX_BOARDS) {
+      if (hands.count + inCart >= MAX_BOARDS) {
         api.say('Já tem tábua demais por aqui.', 'warn');
         return;
       }
-      inHand++;
+      hands.take('tabua');
       playAction('crouch');
-      refreshHands();
     },
   });
 
@@ -362,20 +355,17 @@ function mountFenceWorld(api) {
       drawMineCart(ctx, BOARD_CART.x, BOARD_CART.y, 0);
       if (inCart) drawBoardHandful(ctx, BOARD_CART.x, BOARD_CART.y - 12, inCart);
       drawTag(ctx, BOARD_CART.x, BOARD_CART.y - 36, `${inCart} tábuas`);
-      if (inHand) drawArrow(ctx, BOARD_CART.x, BOARD_CART.y - 50, t);
+      if (!hands.empty) drawArrow(ctx, BOARD_CART.x, BOARD_CART.y - 50, t);
     },
     onInteract: () => {
-      if (inHand) {
-        inCart += inHand;
-        inHand = 0;
+      if (!hands.empty) {
+        inCart += hands.dropAll().length;
         playAction('crouch');
-        refreshHands();
         return;
       }
       if (inCart) {
         inCart--;
-        inHand++;
-        refreshHands();
+        hands.take('tabua');
         return;
       }
       api.say('Pegue tábuas na pilha e ponha no carrinho.', 'warn');
@@ -445,9 +435,8 @@ function mountFenceWorld(api) {
       if (!api.isActive()) return;
       stageIndex++;
       built = null;
-      inHand = 0;
+      hands.dropAll();
       inCart = 0;
-      refreshHands();
       api.setStage(stageIndex);
       api.setObjective(stage().objective);
     }, prefersCalm() ? 0 : 2400);
