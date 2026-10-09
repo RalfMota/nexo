@@ -317,3 +317,122 @@ test('Códice: lei descoberta vira ferramenta (Códice e Calculador Arcano)', as
   await expect(page.locator('#calc-law-out')).toHaveText('60 cristais');
   expect(errors).toEqual([]);
 });
+
+test('Partilha das Sementes: contar, repartir e dividir com resto', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r1a');
+  // Etapa 1: 3 em cada um de 2 canteiros
+  await useObject(page, 'seed-sack', 6);
+  await useObject(page, 'bed-0', 3);
+  await useObject(page, 'bed-1', 3);
+  await wait(page, 2500);
+  // Etapa 2: 12 em 3 canteiros
+  await useObject(page, 'seed-sack', 10);
+  await useObject(page, 'bed-0', 4);
+  await useObject(page, 'bed-1', 4);
+  await useObject(page, 'bed-2', 2);
+  await useObject(page, 'seed-sack', 2);
+  await useObject(page, 'bed-2', 2);
+  await wait(page, 2500);
+  // Etapa 3: 50 em 6 canteiros; primeiro guarda cedo demais (ainda dá uma rodada)
+  await useObject(page, 'seed-sack');
+  await useObject(page, 'seeder', 7);
+  await useObject(page, 'barn-door');
+  expect(await missionDone(page, 'r1a')).toBe(false);
+  await useObject(page, 'seeder');
+  await useObject(page, 'barn-door');
+  expect(await missionDone(page, 'r1a')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Máquina de Produção: 8 ciclos para os 24 cristais da ponte', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r3a');
+  await useObject(page, 'crank-machine', 7); // 21 cristais: pouco
+  await useObject(page, 'mine-cart');
+  await useObject(page, 'cargo-bridge');
+  expect(await missionDone(page, 'r3a')).toBe(false);
+  await wait(page, 1400);
+  await useObject(page, 'crank-machine', 8);
+  await useObject(page, 'mine-cart');
+  await useObject(page, 'cargo-bridge');
+  expect(await missionDone(page, 'r3a')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Jardim Espelhado: eixo vertical, duas cores e eixo horizontal', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r1c');
+  const plant = async (color, cells) => {
+    await useObject(page, `basket-${color}`, cells.length);
+    for (const [col, row] of cells) await useObject(page, `mirror-cell-${col}-${row}`);
+  };
+  // Etapa 1, com uma flor fora do lugar e depois corrigida
+  await plant('red', [[6, 1], [5, 0], [4, 2]]);
+  expect(await missionDone(page, 'r1c')).toBe(false);
+  await useObject(page, 'mirror-cell-6-1'); // mãos vazias: tira a flor
+  await useObject(page, 'mirror-cell-7-1');
+  await wait(page, 2400);
+  await plant('red', [[7, 0], [6, 1]]);
+  await plant('yellow', [[5, 0], [4, 2], [6, 2]]);
+  await wait(page, 2400);
+  await plant('red', [[0, 3], [2, 2], [5, 3]]);
+  await plant('yellow', [[3, 3], [4, 2]]);
+  expect(await missionDone(page, 'r1c')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Cercas do Vale: perímetro, mais espaço e menos cerca', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r1d');
+  await useObject(page, 'board-pile', 14); // a cerca fica aberta
+  await useObject(page, 'board-cart');
+  await useObject(page, 'fence-lever');
+  expect(await missionDone(page, 'r1d')).toBe(false);
+  await useObject(page, 'board-pile', 2);
+  await useObject(page, 'board-cart');
+  await useObject(page, 'fence-lever');
+  await wait(page, 2600);
+  await useObject(page, 'fence-w-up', 2); // 5 × 5
+  await useObject(page, 'fence-h-up', 2);
+  await useObject(page, 'fence-lever');
+  await wait(page, 2600);
+  await useObject(page, 'fence-w-up'); // 6 × 4
+  await useObject(page, 'fence-h-down');
+  await useObject(page, 'fence-lever');
+  expect(await missionDone(page, 'r1d')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Jardim de Nyla: lados 6, 6 e 7', async ({ page }) => {
+  const errors = await enterGame(page);
+  await page.evaluate(async () => {
+    (await import('/js/core/state.js')).state.dbg = true;
+  });
+  await startMission(page, 'r5c');
+  await useObject(page, 'garden-side-up', 4); // 5 × 5: sobram lajotas
+  await useObject(page, 'lay-lever');
+  expect(await missionDone(page, 'r5c')).toBe(false);
+  await useObject(page, 'garden-side-up'); // 6
+  await useObject(page, 'lay-lever');
+  await wait(page, 2600);
+  await useObject(page, 'garden-side-up', 5); // 6 × 8
+  await useObject(page, 'lay-lever');
+  await wait(page, 2600);
+  await useObject(page, 'garden-side-up', 6); // 7 × 7 − 4
+  await useObject(page, 'lay-lever');
+  expect(await missionDone(page, 'r5c')).toBe(true);
+  expect(errors).toEqual([]);
+});
